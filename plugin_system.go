@@ -2,7 +2,6 @@ package gate
 
 import (
 	"github.com/hanjingo/gate/com"
-	"github.com/hanjingo/gate/plugin"
 )
 
 type PluginSystem struct {
@@ -12,11 +11,11 @@ type PluginSystem struct {
 
 func newPluginSystem() *PluginSystem {
 	return &PluginSystem{
-		plugins: plugin.Plugins,
+		plugins: make(map[string]com.PluginI),
 	}
 }
 
-func (ps *PluginSystem) onMsg(agent com.AgentI, msg *com.Msg) error {
+func (ps *PluginSystem) onMsg(agent com.AgentI, data []byte) error {
 	return nil
 }
 

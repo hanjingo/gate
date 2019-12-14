@@ -6,21 +6,23 @@ import (
 
 	"github.com/hanjingo/gate/com"
 	"github.com/hanjingo/network"
+	pc4 "github.com/hanjingo/protocol/v4"
 )
 
 type Gate struct {
 	id           uint8                           //gate id
 	agents       map[interface{}]com.AgentI      //端点集合
 	servers      map[interface{}]network.ServerI //tcp/ws/http服务器集合
-	codecer      *codec                          //编解码器
 	pluginSystem *PluginSystem                   //插件系统
+	codec        *pc4.Codec                      //编解码器
 }
 
 func NewGate() *Gate {
 	back := &Gate{
-		agents:  make(map[interface{}]com.AgentI),
-		servers: make(map[interface{}]network.ServerI),
-		codecer: newCodec(),
+		agents:       make(map[interface{}]com.AgentI),
+		servers:      make(map[interface{}]network.ServerI),
+		pluginSystem: newPluginSystem(),
+		codec:        pc4.NewCodec(),
 	}
 	return back
 }
@@ -62,10 +64,16 @@ func (gate *Gate) handleMsg(agentId uint64, data []byte) error {
 	if !ok {
 		return errors.New("送信人不存在")
 	}
-	//编解码
-	msg, err := gate.codecer.UnFormat(data)
-	if err != nil || msg == nil {
+	//解析操作码
+	opcode, err := gate.codec.ParseOpCode(data)
+	if err != nil {
 		return err
 	}
-	return gate.pluginSystem.onMsg(agent, msg)
+	//捕获系统消息
+	switch opcode & com.MASK_ACTION {
+	case com.ACTION_SYS:
+		//todo
+		return nil
+	}
+	return gate.pluginSystem.onMsg(agent, data)
 }

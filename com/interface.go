@@ -4,7 +4,7 @@ type PluginI interface {
 	Name() string
 	OnNewAgent(AgentI) error
 	OnAgentClose(AgentI) error
-	OnMsg(*Msg) (*Msg, error)
+	OnMsg(AgentI, []byte) ([]byte, error)
 }
 
 type AgentI interface {
