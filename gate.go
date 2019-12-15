@@ -2,6 +2,8 @@ package gate
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/hanjingo/gate/com"
@@ -17,20 +19,31 @@ type Gate struct {
 	codec        *pc4.Codec                      //编解码器
 }
 
-func NewGate() *Gate {
+func NewGate(conf *GateConfig) *Gate {
 	back := &Gate{
 		agents:       make(map[interface{}]com.AgentI),
 		servers:      make(map[interface{}]network.ServerI),
 		pluginSystem: newPluginSystem(),
 		codec:        pc4.NewCodec(),
 	}
+	for _, sconf := range conf.Servers {
+		switch strings.ToUpper(sconf.Type) {
+		case "WS":
+			s, err := network.NewWsServer(sconf, back.onConnClose, back.onNewConn)
+			if err != nil {
+				panic(err)
+			}
+			back.servers[s.Name] = s
+		}
+	}
 	return back
 }
 
 //跑起来
 func (gate *Gate) Run(wg *sync.WaitGroup) {
-	for _, s := range gate.servers {
+	for id, s := range gate.servers {
 		s.Run(wg)
+		fmt.Println("服务器:", id, "已启动")
 	}
 }
 
@@ -55,7 +68,7 @@ func (gate *Gate) onConnClose(c network.ConnI) {
 	if gate.pluginSystem != nil {
 		gate.pluginSystem.onAgentClose(agent)
 	}
-	//todo
+	delete(gate.agents, c.GetId())
 }
 
 //处理收到的消息

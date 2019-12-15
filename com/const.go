@@ -1,11 +1,12 @@
 package com
 
 import (
-	pc4 "github.com/hanjingo/protocol/v4"
+	"github.com/hanjingo/util"
 )
 
-//通用消息
-type Msg pc4.Messager
+const START_TIME_STR string = "2019-01-01 00:00:00"
+
+var START_TIME = util.TimeStampToTime(START_TIME_STR)
 
 //未知编码id
 const UNKNOWN_CODECID uint8 = 0
@@ -18,20 +19,24 @@ const (
 //动作
 const (
 	//0~7 基础功能
-	ACTION_ROUTE uint32 = 0 //路由
-	ACTION_PING  uint32 = 1 //ping
-	ACTION_PONG  uint32 = 2 //pong
+	ACTION_ROUTE         uint32 = 0 //路由
+	ACTION_PING          uint32 = 1 //ping
+	ACTION_PONG          uint32 = 2 //pong
+	ACTION_NEW_AGENT     uint32 = 3 //建立端点请求
+	ACTION_NEW_AGENT_RSP uint32 = 4 //建立端点返回
 
 	//8～15 客户端
-	ACTION_REQ uint32 = 8 //请求
-	ACTION_SUB uint32 = 9 //订阅
+	ACTION_REQ   uint32 = 8  //请求
+	ACTION_SUB   uint32 = 9  //订阅
+	ACTION_UNSUB uint32 = 10 //取消订阅
 
 	//32～63 服务器
-	ACTION_REG_SERVER uint32 = 32 //注册服务
-	ACTION_RSP        uint32 = 33 //服务器返回消息
-	ACTION_MULTCAST   uint32 = 34 //多播
-	ACTION_BROADCAST  uint32 = 35 //广播
-	ACTION_PUB        uint32 = 36 //发布
+	ACTION_RSP          uint32 = 32 //服务器返回消息
+	ACTION_REG_SERVER   uint32 = 33 //注册服务
+	ACTION_UNREG_SERVER uint32 = 34 //取消注册服务
+	ACTION_MULTCAST     uint32 = 35 //多播
+	ACTION_BROADCAST    uint32 = 36 //广播
+	ACTION_PUB          uint32 = 37 //发布
 
 	//128~254 控制码
 	ACTION_CLOSE_AGENT              uint32 = 128 //关闭节点
