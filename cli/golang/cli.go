@@ -1,11 +1,12 @@
 package golang
 
 import (
+	"fmt"
 	"errors"
 	"time"
 
 	"github.com/hanjingo/gate/com"
-	ctl "github.com/hanjingo/gate/plugin/controller"
+	ctlv1 "github.com/hanjingo/gate/plugin/control_v1"
 	"github.com/hanjingo/util"
 
 	ws "github.com/gorilla/websocket"
@@ -59,15 +60,15 @@ func (cli *GateCli) Dial(dialType string, addr string, token string, conf *netwo
 	if err != nil {
 		return err
 	}
-	conn, err = network.NewWsConn(conf, c, cli.onConnClose)
+	conn, err = network.NewWsConn(conf, c, cli.onConnClose, nil)
 	if err != nil {
 		return err
 	}
 	conn.Run()
 	//发请求
 	p := newProto()
-	p.OpCode = com.ACTION_NEW_AGENT
-	p.Content = &ctl.MsgNewAgentReq{Token: token}
+	p.OpCode = OP_NEW_AGENT
+	p.Content = &ctlv1.MsgNewAgentReq{Token: token}
 	data, err := cli.codec.Format(p)
 	if err != nil {
 		return err
@@ -75,21 +76,23 @@ func (cli *GateCli) Dial(dialType string, addr string, token string, conf *netwo
 	if err := conn.WriteMsg(data); err != nil {
 		return err
 	}
+	fmt.Println("我在这1")
 	//收回复
 	data1, err := conn.ReadMsg()
 	if err != nil {
 		return err
 	}
-	p1 := &pv4.Messager{Content: &ctl.MsgNewAgentRsp{}}
+	p1 := &pv4.Messager{Content: &ctlv1.MsgNewAgentRsp{}}
 	if err := cli.codec.UnFormat(data1, p1); err != nil {
 		return err
 	}
-	rsp := p1.Content.(*ctl.MsgNewAgentRsp)
+	rsp := p1.Content.(*ctlv1.MsgNewAgentRsp)
 	if !rsp.Result {
 		return errors.New("网关拒绝建立连接")
 	}
 	cli.conn = conn
 	cli.id = rsp.Id
+	fmt.Println("与网关:", addr, "连接建立")
 	return nil
 }
 
@@ -100,7 +103,7 @@ func (cli *GateCli) onConnClose(c network.ConnI) {
 //路由
 func (cli *GateCli) Route(msg interface{}, recvs ...uint64) error {
 	p := newProto()
-	p.OpCode = com.ACTION_ROUTE
+	p.OpCode = OP_ROUTE
 	p.Receiver = recvs
 	p.Sender = cli.id
 	p.Content = msg
@@ -114,7 +117,7 @@ func (cli *GateCli) Route(msg interface{}, recvs ...uint64) error {
 //ping
 func (cli *GateCli) Ping(msg interface{}) error {
 	p := newProto()
-	p.OpCode = com.ACTION_PING
+	p.OpCode = OP_PING
 	p.Sender = cli.id
 	p.Content = msg
 	data, err := cli.codec.Format(p)
@@ -126,16 +129,7 @@ func (cli *GateCli) Ping(msg interface{}) error {
 
 //请求
 func (cli *GateCli) Req(opCode uint32, msg interface{}, recv ...uint64) error {
-	p := newProto()
-	p.OpCode = com.ACTION_REQ * opCode
-	p.Receiver = recv
-	p.Sender = cli.id
-	p.Content = msg
-	data, err := cli.codec.Format(p)
-	if err != nil {
-		return err
-	}
-	return cli.conn.WriteMsg(data)
+	return nil
 }
 
 //订阅

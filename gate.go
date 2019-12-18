@@ -1,22 +1,23 @@
 package gate
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/hanjingo/gate/com"
 	"github.com/hanjingo/network"
-	pc4 "github.com/hanjingo/protocol/v4"
+	pv4 "github.com/hanjingo/protocol/v4"
 )
+
+const MASK_SYS = 0xa0000000 //系统权限
 
 type Gate struct {
 	id           uint8                           //gate id
 	agents       map[interface{}]com.AgentI      //端点集合
 	servers      map[interface{}]network.ServerI //tcp/ws/http服务器集合
 	pluginSystem *PluginSystem                   //插件系统
-	codec        *pc4.Codec                      //编解码器
+	codec        *pv4.Codec                      //编解码器
 }
 
 func NewGate(conf *GateConfig) *Gate {
@@ -24,12 +25,12 @@ func NewGate(conf *GateConfig) *Gate {
 		agents:       make(map[interface{}]com.AgentI),
 		servers:      make(map[interface{}]network.ServerI),
 		pluginSystem: newPluginSystem(),
-		codec:        pc4.NewCodec(),
+		codec:        pv4.NewCodec(),
 	}
 	for _, sconf := range conf.Servers {
 		switch strings.ToUpper(sconf.Type) {
 		case "WS":
-			s, err := network.NewWsServer(sconf, back.onConnClose, back.onNewConn)
+			s, err := network.NewWsServer(sconf, back.onConnClose, back.onNewConn, back.handleMsg)
 			if err != nil {
 				panic(err)
 			}
@@ -72,21 +73,19 @@ func (gate *Gate) onConnClose(c network.ConnI) {
 }
 
 //处理收到的消息
-func (gate *Gate) handleMsg(agentId uint64, data []byte) error {
+func (gate *Gate) handleMsg(agentId uint64, data []byte) {
 	agent, ok := gate.agents[agentId]
 	if !ok {
-		return errors.New("送信人不存在")
+		return
 	}
 	//解析操作码
 	opcode, err := gate.codec.ParseOpCode(data)
 	if err != nil {
-		return err
+		return
 	}
 	//捕获系统消息
-	switch opcode & com.MASK_ACTION {
-	case com.ACTION_SYS:
-		//todo
-		return nil
+	switch opcode & MASK_SYS {
+	//todo
 	}
-	return gate.pluginSystem.onMsg(agent, data)
+	err = gate.pluginSystem.onMsg(agent, data)
 }

@@ -1,7 +1,10 @@
 package gate
 
 import (
+	"fmt"
+
 	"github.com/hanjingo/gate/com"
+	"github.com/hanjingo/gate/plugin"
 )
 
 //插件系统
@@ -14,6 +17,15 @@ func newPluginSystem() *PluginSystem {
 	back := &PluginSystem{
 		plugins: make(map[string]com.PluginI),
 		tasks:   []string{},
+	}
+	pMap := plugin.GetPluginMap()
+	if pMap != nil {
+		for name, p := range pMap {
+			back.plugins[name] = p
+			fmt.Println("加载插件:", name)
+		}
+	} else {
+		fmt.Println("警告！找不到插件")
 	}
 	return back
 }
