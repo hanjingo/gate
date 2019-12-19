@@ -64,7 +64,6 @@ func (cli *GateCli) Dial(dialType string, addr string, token string, conf *netwo
 	if err != nil {
 		return err
 	}
-	conn.Run()
 	//发请求
 	p := newProto()
 	p.OpCode = OP_NEW_AGENT
