@@ -33,7 +33,7 @@ func NewStream() *Stream {
 		name:        "StreamV1",
 		agents:      make(map[interface{}]*agentInfo),
 		streamSpeed: int(util.MB * 64), //默认流速
-		scanDur:     10,           //扫描间隔
+		scanDur:     10,                //扫描间隔
 		reSendMsg:   nil,
 	}
 	back.run()

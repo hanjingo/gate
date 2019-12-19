@@ -16,7 +16,6 @@ func newAgentV1(c network.ConnI) *agentV1 {
 		conn:    c,
 		isValid: false, //经过验证才让他可用
 	}
-	back.conn.Run()
 	return back
 }
 
