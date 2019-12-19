@@ -26,3 +26,18 @@ type MsgPub struct {
 	Topic string
 	Info  interface{}
 }
+
+type MsgRegApi struct {
+	Apis []uint32
+	Id   uint64
+}
+
+type MsgUnRegApi struct {
+	Apis []uint32
+	Id   uint64
+}
+
+type MsgControl struct {
+	Cmd uint32
+	Args []interface{}
+}

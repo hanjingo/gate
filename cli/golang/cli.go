@@ -1,8 +1,8 @@
 package golang
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/hanjingo/gate/com"
@@ -17,28 +17,43 @@ import (
 
 type CallFunc func(interface{})
 
-func newProto() *pv4.Messager {
-	return &pv4.Messager{
-		OpCode:    0,
-		Receiver:  []uint64{},
-		Sender:    0,
+func writeMsg(conn network.ConnI, codec protocol.CodecI, opcode uint32, sender uint64, content interface{}, recvs []uint64) error {
+	p := &pv4.Messager{
+		OpCode:    opcode,
+		Sender:    sender,
+		Receiver:  recvs,
 		TimeStamp: util.TimeDurToMilliSecond(time.Now().Sub(com.START_TIME)),
-		Content:   nil,
+		Content:   content,
 	}
+	data, err := codec.Format(p)
+	if err != nil {
+		return err
+	}
+	return conn.WriteMsg(data)
+}
+
+func readMsg(conn network.ConnI, codec protocol.CodecI, content interface{}) error {
+	data, err := conn.ReadMsg()
+	if err != nil {
+		return err
+	}
+	return codec.UnFormat(data, content)
 }
 
 //网关客户端
 type GateCli struct {
-	id      uint64
-	conn    network.ConnI
-	callMap map[uint32]CallFunc
-	codec   protocol.CodecI
+	id                uint64
+	conn              network.ConnI
+	callMap           map[uint32]CallFunc
+	codec             protocol.CodecI
+	connCloseCallback func(network.ConnI)
 }
 
-func NewGateCli() *GateCli {
+func NewGateCli(f func(network.ConnI)) *GateCli {
 	back := &GateCli{
-		callMap: make(map[uint32]CallFunc),
-		codec:   pv4.NewCodec(),
+		callMap:           make(map[uint32]CallFunc),
+		codec:             pv4.NewCodec(),
+		connCloseCallback: f,
 	}
 	return back
 }
@@ -65,27 +80,14 @@ func (cli *GateCli) Dial(dialType string, addr string, token string, conf *netwo
 		return err
 	}
 	//发请求
-	p := newProto()
-	p.OpCode = OP_NEW_AGENT
-	p.Content = &ctlv1.MsgNewAgentReq{Token: token}
-	data, err := cli.codec.Format(p)
-	if err != nil {
+	if err := writeMsg(conn, cli.codec, OP_NEW_AGENT, 0, &ctlv1.MsgNewAgentReq{Token: token}, nil); err != nil {
 		return err
 	}
-	if err := conn.WriteMsg(data); err != nil {
-		return err
-	}
-	fmt.Println("我在这1")
 	//收回复
-	data1, err := conn.ReadMsg()
-	if err != nil {
+	rsp := &ctlv1.MsgNewAgentRsp{}
+	if err := readMsg(conn, cli.codec, rsp); err != nil {
 		return err
 	}
-	p1 := &pv4.Messager{Content: &ctlv1.MsgNewAgentRsp{}}
-	if err := cli.codec.UnFormat(data1, p1); err != nil {
-		return err
-	}
-	rsp := p1.Content.(*ctlv1.MsgNewAgentRsp)
 	if !rsp.Result {
 		return errors.New("网关拒绝建立连接")
 	}
@@ -96,69 +98,31 @@ func (cli *GateCli) Dial(dialType string, addr string, token string, conf *netwo
 }
 
 func (cli *GateCli) onConnClose(c network.ConnI) {
-	//todo
+	if cli.connCloseCallback != nil {
+		cli.connCloseCallback(c)
+	}
 }
 
 //路由
 func (cli *GateCli) Route(msg interface{}, recvs ...uint64) error {
-	p := newProto()
-	p.OpCode = OP_ROUTE
-	p.Receiver = recvs
-	p.Sender = cli.id
-	p.Content = msg
-	data, err := cli.codec.Format(p)
-	if err != nil {
-		return err
-	}
-	return cli.conn.WriteMsg(data)
+	return writeMsg(cli.conn, cli.codec, OP_ROUTE, cli.id, msg, recvs)
 }
 
 //ping
-func (cli *GateCli) Ping(msg interface{}) error {
-	p := newProto()
-	p.OpCode = OP_PING
-	p.Sender = cli.id
-	p.Content = msg
-	data, err := cli.codec.Format(p)
-	if err != nil {
-		return err
-	}
-	return cli.conn.WriteMsg(data)
+func (cli *GateCli) Ping() error {
+	return writeMsg(cli.conn, cli.codec, OP_PING, cli.id,
+		&ctlv1.MsgPing{}, nil)
 }
 
 //请求
 func (cli *GateCli) Req(opCode uint32, msg interface{}, recv ...uint64) error {
-	return nil
+	return writeMsg(cli.conn, cli.codec, MASK_CLI&opCode, cli.id, msg, recv)
 }
 
 //订阅
-func (cli *GateCli) Sub() {
-
-}
-
-//取消订阅
-func (cli *GateCli) UnSub() {
-
-}
-
-//注册服务
-func (cli *GateCli) RegApi() {
-
-}
-
-//取消注册
-func (cli *GateCli) UnRegApi() {
-
-}
-
-//多播
-func (cli *GateCli) MultCast() {
-
-}
-
-//广播
-func (cli *GateCli) BroadCast() {
-
+func (cli *GateCli) Sub(topics ...string) error {
+	return writeMsg(cli.conn, cli.codec, OP_SUB, cli.id,
+		&ctlv1.MsgSub{Topics: topics}, nil)
 }
 
 //发布
@@ -166,7 +130,36 @@ func (cli *GateCli) Pub() {
 
 }
 
-//控制
-func (cli *GateCli) Control() {
+//取消订阅
+func (cli *GateCli) UnSub(topics ...string) error {
+	return writeMsg(cli.conn, cli.codec, OP_UNSUB, cli.id,
+		&ctlv1.MsgUnSub{Topics: topics}, nil)
+}
 
+//注册服务
+func (cli *GateCli) RegApi(apis ...uint32) error {
+	return writeMsg(cli.conn, cli.codec, OP_REG_SERVER, cli.id,
+		&ctlv1.MsgRegApi{Apis: apis, Id: cli.id}, nil)
+}
+
+//取消注册
+func (cli *GateCli) UnRegApi(apis ...uint32) error {
+	return writeMsg(cli.conn, cli.codec, OP_UNREG_SERVER, cli.id,
+		&ctlv1.MsgUnRegApi{Apis: apis, Id: cli.id}, nil)
+}
+
+//多播
+func (cli *GateCli) MultCast(msg interface{}, recvs ...uint64) error {
+	return writeMsg(cli.conn, cli.codec, OP_MULTCAST, cli.id, msg, recvs)
+}
+
+//广播
+func (cli *GateCli) BroadCast(msg interface{}) error {
+	return writeMsg(cli.conn, cli.codec, OP_BROADCAST, cli.id, msg, nil)
+}
+
+//控制
+func (cli *GateCli) Control(cmd uint32, args ...interface{}) error {
+	return writeMsg(cli.conn, cli.codec, cmd, cli.id,
+		&ctlv1.MsgControl{Cmd: cmd, Args: args}, nil)
 }

@@ -13,16 +13,17 @@ type PluginSystem struct {
 	tasks   []string
 }
 
-func newPluginSystem() *PluginSystem {
+func newPluginSystem(conf *GateConfig) *PluginSystem {
 	back := &PluginSystem{
 		plugins: make(map[string]com.PluginI),
 		tasks:   []string{},
 	}
-	pMap := plugin.GetPluginMap()
-	if pMap != nil {
-		for name, p := range pMap {
-			back.plugins[name] = p
-			fmt.Println("加载插件:", name)
+	if pMap := plugin.GetPluginMap(); pMap != nil {
+		for name, _ := range conf.Plugins {
+			if p, ok := pMap[name]; ok {
+				back.plugins[name] = p
+				fmt.Println("加载插件:", name)
+			}
 		}
 	} else {
 		fmt.Println("警告！找不到插件")
@@ -32,17 +33,15 @@ func newPluginSystem() *PluginSystem {
 
 //处理消息
 func (ps *PluginSystem) onMsg(agent com.AgentI, data []byte) error {
-	go func() {
-		var err error
-		for _, name := range ps.tasks {
-			if p, ok := ps.plugins[name]; ok {
-				data, err = p.OnMsg(agent, data)
-				if err != nil {
-					return
-				}
+	var err error
+	for _, name := range ps.tasks {
+		if p, ok := ps.plugins[name]; ok {
+			data, err = p.OnMsg(agent, data)
+			if err != nil {
+				return err
 			}
 		}
-	}()
+	}
 	return nil
 }
 

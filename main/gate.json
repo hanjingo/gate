@@ -24,5 +24,19 @@
                 "NoDelay":true
             }
         }
+    },
+    "Plugins":{
+        "ControllerV1":{
+            "Name":"ControllerV1"
+        },
+        "FiltV1":{
+            "Name":"FiltV1"
+        },
+        "PermV1":{
+            "Name":"PermV1"
+        },
+        "StreamV1":{
+            "Name":"StreamV1"
+        }
     }
 }

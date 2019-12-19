@@ -24,7 +24,7 @@ func NewGate(conf *GateConfig) *Gate {
 	back := &Gate{
 		agents:       make(map[interface{}]com.AgentI),
 		servers:      make(map[interface{}]network.ServerI),
-		pluginSystem: newPluginSystem(),
+		pluginSystem: newPluginSystem(conf),
 		codec:        pv4.NewCodec(),
 	}
 	for _, sconf := range conf.Servers {
