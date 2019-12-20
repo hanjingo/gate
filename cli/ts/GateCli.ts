@@ -58,6 +58,10 @@ namespace GateCliv1 {
         AlreadyReg = 3,     //已经注册无需再次注册
     }
 
+    type FormatBack=["", ErrorCode];
+    type ReadMSG=[any, ErrorCode];
+    type UnFormatBack=[any, ErrorCode];
+
     export class GateCli {
         private _conn: WebSocket; //ws连接
 
@@ -145,14 +149,15 @@ namespace GateCliv1 {
         }
     }
 
-    class Codec {
-
-        public function Format(arg:any):(string, ErrorCode){
-            let back = "";
-            return back, ErrorCode.Success;
+    //编解码类
+    public class Codec {
+        public function Format(arg:any):FormatBack{
+            let back:FormatBack = ["", ErrorCode.Success];
+            return back;
         }
-        public function UnFormat(arg:string, content:any):ErrorCode{
-            return ErrorCode.Success;
+        public function UnFormat(arg:string, content:any):UnFormatBack{
+            let back = content;
+            return [back, ErrorCode.Success];
         }
     }
 
@@ -161,7 +166,11 @@ namespace GateCliv1 {
         return ErrorCode.Success;
     }
     //收消息
-    function readMsg(ws: WebSocket, codec: Codec, content: any) (any, ErrorCode) {
-
+    function readMsg(ws: WebSocket, codec: Codec, content: any): ReadMSG {
+        let back: ReadMSG;
+        return back;
     }
+    
 }
+
+
