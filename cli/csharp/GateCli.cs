@@ -58,5 +58,9 @@ namespace GateCliv1 {
         AlreadyReg = 3,     //已经注册无需再次注册
     }
 
-    public class GateCli {}
+    public class GateCli {
+        public ErrorCode Dial(string dialType, string addr, string token) {
+
+        }
+    }
 }
