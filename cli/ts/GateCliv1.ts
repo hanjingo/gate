@@ -153,7 +153,7 @@ namespace GateCliv1 {
             return ErrorCode.Success;
         }
 
-        //控制客户端
+        //控制命令
         public Control(cmd:number, ...args:any): ErrorCode {
             return ErrorCode.Success;
         }
@@ -203,7 +203,6 @@ namespace GateCliv1 {
             let contentData = this.StringToBytes(JSON.stringify(msg.content));
             let opData = msg.opcode<<32;
             let recvLenData = msg.recvs.length * 8;
-
             return [back, ErrorCode.Success];
         }
 
@@ -215,7 +214,6 @@ namespace GateCliv1 {
 
         //string转[]byte
         public StringToBytes(str):any {
-            
             let bytes = new Array();
             var len, c;
             len = str.length;

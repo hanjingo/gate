@@ -19,7 +19,7 @@ const (
 	OP_ROUTE         = MASK_NORM | 0x1 //路由
 	OP_PING          = MASK_NORM | 0x2 //ping
 	OP_PONG          = MASK_NORM | 0x3 //pong
-	OP_NEW_AGENT     = MASK_NORM | 0x4 //建立端点
+	OP_NEW_AGENT_REQ = MASK_NORM | 0x4 //建立端点
 	OP_NEW_AGENT_RSP = MASK_NORM | 0x5 //建立端点返回
 
 	//客户端
@@ -41,3 +41,6 @@ const (
 	OP_SET_AGENT_UNLIMIT_STREAM = MASK_CONTROL | 0x5 //设置节点不控流
 	OP_CHANGE_PERM              = MASK_CONTROL | 0x6 //变更权限
 )
+
+//插件名字
+const PLUGIN_NAME = "ControllerV1"

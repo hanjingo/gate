@@ -2,7 +2,6 @@ package filt_v1
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/hanjingo/gate/com"
 )
@@ -23,20 +22,7 @@ func NewFilt() *Filt {
 	}
 }
 
-func (f *Filt) Name() string {
-	return f.name
-}
-
-func (f *Filt) Set(name string, value interface{}) {
-	switch strings.ToUpper(name) {
-	case "NAME":
-		if name, ok := value.(string); ok {
-			f.name = name
-		}
-	}
-}
-
-func (f *Filt) OnNewAgent(agent com.AgentI) error {
+func (f *Filt) onNewAgent(agent com.AgentI) error {
 	info := &agentInfo{
 		id:    agent.GetId(),
 		bFilt: false,
@@ -45,12 +31,12 @@ func (f *Filt) OnNewAgent(agent com.AgentI) error {
 	return nil
 }
 
-func (f *Filt) OnAgentClose(agent com.AgentI) error {
+func (f *Filt) onAgentClose(agent com.AgentI) error {
 	delete(f.agents, agent.GetId())
 	return nil
 }
 
-func (f *Filt) OnMsg(agent com.AgentI, data []byte) ([]byte, error) {
+func (f *Filt) onFilt(agent com.AgentI, data []byte) ([]byte, error) {
 	if info, ok := f.agents[agent.GetId()]; ok {
 		if info.bFilt {
 			return nil, errors.New("消息已经被过滤")

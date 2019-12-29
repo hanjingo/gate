@@ -11,13 +11,45 @@ import (
 	pv4 "github.com/hanjingo/protocol/v4"
 )
 
-func (ctl *ControllerV1) regFunc() {
-	ctl.actionFuncMap[OP_NEW_AGENT] = ctl.onNewAgentReq //连接验证
-	ctl.actionFuncMap[OP_ROUTE] = ctl.onRoute           //路由
-	ctl.actionFuncMap[OP_PING] = ctl.onPing             //ping
-	ctl.actionFuncMap[OP_SUB] = ctl.onSub               //订阅
-	ctl.actionFuncMap[OP_UNSUB] = ctl.onUnSub           //取消订阅
-	ctl.actionFuncMap[OP_PUB] = ctl.onPub               //发布
+func (ctl *ControllerV1) reg() {
+	if ctl.info == nil || ctl.info.CallBackMap == nil {
+		return
+	}
+	m := ctl.info.CallBackMap
+	m[com.AGENT_CONNECT] = append(m[com.AGENT_CONNECT], ctl.onNewAgent)  //建立端点
+	m[com.AGENT_CLOSE] = append(m[com.AGENT_CLOSE], ctl.onAgentClose)    //关闭端点
+	m[OP_NEW_AGENT_REQ] = append(m[OP_NEW_AGENT_REQ], ctl.onNewAgentReq) //建立端点请求
+	m[OP_ROUTE] = append(m[OP_ROUTE], ctl.onRoute)                       //处理路由
+	m[OP_PING] = append(m[OP_PING], ctl.onPing)                          //处理ping
+	m[OP_SUB] = append(m[OP_SUB], ctl.onSub)                             //处理订阅
+	m[OP_UNSUB] = append(m[OP_UNSUB], ctl.onUnSub)                       //处理取消订阅
+	m[OP_PUB] = append(m[OP_PUB], ctl.onPub)                             //处理发布
+}
+
+//新建agent
+func (c *ControllerV1) onNewAgent(agent com.AgentI) {
+	go func() {
+		tm := time.NewTimer(time.Duration(c.newAgentWaitTimeout) * time.Millisecond)
+		tm1 := time.NewTimer(time.Duration(10 * time.Millisecond))
+		defer agent.Close()
+		select {
+		case <-tm.C:
+			if !agent.IsValid() {
+				agent.Close()
+			}
+			return
+		case <-tm1.C:
+			return
+		}
+	}()
+}
+
+//关闭agent
+func (c *ControllerV1) onAgentClose(agent com.AgentI) {
+	if info, ok := c.agents[agent.GetId()]; ok {
+		info.subTopics = nil
+		info.apis = nil
+	}
 }
 
 //连接验证

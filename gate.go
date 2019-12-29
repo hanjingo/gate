@@ -1,60 +1,48 @@
 package gate
 
 import (
-	"fmt"
-	"strings"
+	"net/http"
 	"sync"
 
 	"github.com/hanjingo/gate/com"
 	"github.com/hanjingo/network"
+	ps "github.com/hanjingo/plugin_system"
 	pv4 "github.com/hanjingo/protocol/v4"
 )
 
 const MASK_SYS = 0xa0000000 //系统权限
 
 type Gate struct {
-	id           uint8                           //gate id
-	agents       map[interface{}]com.AgentI      //端点集合
-	servers      map[interface{}]network.ServerI //tcp/ws/http服务器集合
-	pluginSystem *PluginSystem                   //插件系统
-	codec        *pv4.Codec                      //编解码器
+	conf    *GateConfig                     //配置
+	agents  map[interface{}]com.AgentI      //端点集合
+	servers map[interface{}]network.ServerI //tcp/ws/http服务器集合
+	hubs    *ps.Hubs                        //插件系统
+	codec   *pv4.Codec                      //编解码器
 }
 
 func NewGate(conf *GateConfig) *Gate {
 	back := &Gate{
-		agents:       make(map[interface{}]com.AgentI),
-		servers:      make(map[interface{}]network.ServerI),
-		pluginSystem: newPluginSystem(conf),
-		codec:        pv4.NewCodec(),
+		conf:    conf,
+		agents:  make(map[interface{}]com.AgentI),
+		servers: make(map[interface{}]network.ServerI),
+		hubs:    ps.NewHubs(),
+		codec:   pv4.NewCodec(),
 	}
-	for _, sconf := range conf.Servers {
-		switch strings.ToUpper(sconf.Type) {
-		case "WS":
-			s, err := network.NewWsServer(sconf, back.onConnClose, back.onNewConn, back.handleMsg)
-			if err != nil {
-				panic(err)
-			}
-			back.servers[s.Name] = s
-		}
-	}
+	back.reg()
 	return back
 }
 
 //跑起来
 func (gate *Gate) Run(wg *sync.WaitGroup) {
-	for id, s := range gate.servers {
-		s.Run(wg)
-		fmt.Println("服务器:", id, "已启动")
-	}
+	//监听http
+	http.ListenAndServe(gate.conf.ConfServAddr, nil)
 }
 
 //处理新建连接
 func (gate *Gate) onNewConn(c network.ConnI) {
 	agent := newAgentV1(c)
-	if gate.pluginSystem != nil {
-		if err := gate.pluginSystem.onNewAgent(agent); err != nil {
-			return
-		}
+	if gate.hubs != nil {
+		gate.hubs.Call(com.AGENT_CONNECT, agent)
 	}
 	gate.agents[agent.GetId()] = agent
 }
@@ -63,11 +51,10 @@ func (gate *Gate) onNewConn(c network.ConnI) {
 func (gate *Gate) onConnClose(c network.ConnI) {
 	agent, ok := gate.agents[c.GetId()]
 	if !ok {
-		//todo
 		return
 	}
-	if gate.pluginSystem != nil {
-		gate.pluginSystem.onAgentClose(agent)
+	if gate.hubs != nil {
+		gate.hubs.Call(com.AGENT_CLOSE, agent)
 	}
 	delete(gate.agents, c.GetId())
 }
@@ -87,5 +74,14 @@ func (gate *Gate) handleMsg(agentId uint64, data []byte) {
 	switch opcode & MASK_SYS {
 	//todo
 	}
-	err = gate.pluginSystem.onMsg(agent, data)
+	//发给插件
+	if gate.hubs != nil {
+		gate.hubs.Call(opcode, agent)
+	}
+}
+
+//返回网关信息
+func (gate *Gate) info() *GateInfo {
+	//todo
+	return nil
 }
