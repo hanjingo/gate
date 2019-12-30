@@ -58,9 +58,85 @@ namespace GateCliv1 {
         AlreadyReg = 3,     //已经注册无需再次注册
     }
 
+
+
+    /*
+    * 网关客户端
+    */
     public class GateCli {
-        public ErrorCode Dial(string dialType, string addr, string token) {
+        //编解码器
+
+        //拨号
+        public ErrorCode Dial(string ip, int port, string token) {
+            TcpConn conn = new TcpConn();
+            conn.Connect(ip, port);
+            NewAgentReq req = new NewAgentReq();
+            req.Token = token;
+            conn.Send(req);
+        }
+
+        //路由
+        public ErrorCode Route(T msg, uint64[] recvs) {
 
         }
+
+        //ping
+        public ErrorCode Ping() {
+
+        }
+
+        //请求
+        public ErrorCode Req(uint32 OpCode, T msg, uint64[] recvs) {
+
+        }
+
+        //订阅
+        public ErrorCode Sub(string[] topics) {
+
+        }
+
+        //发布
+        public ErrorCode Pub() {
+
+        }
+
+        //取消订阅
+        public ErrorCode UnSub() {
+
+        }
+
+        //注册服务
+        public ErrorCode RegApi(uint32[] apis) {
+
+        }
+
+        //取消注册
+        public ErrorCode UnRegApi(uint32[] apis) {
+
+        }
+
+        //多播
+        public ErrorCode MultCast(T msg, uint32[] recvs) {
+
+        }
+
+        //广播
+        public ErrorCode BroadCast(T msg) {
+
+        }
+
+        //控制
+        public ErrorCode Ctl(uint32 cmd, T msg) {
+
+        }
+    }
+
+    class NewAgentReq {
+        public string Token;
+    }
+
+    class NewAgentRsp {
+        ErrorCode Result;
+        uint64 id;
     }
 }

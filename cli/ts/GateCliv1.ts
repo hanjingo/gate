@@ -1,3 +1,14 @@
+import { 
+    StringToBytes, 
+    IntToBytes, 
+    Uint16ToBytes, 
+    Uint64ToBytes, 
+    BytesToUint16, 
+    BytesToInt, 
+    BytesToUint64, 
+    BytesToString 
+} from "../../../util/transform";
+
 namespace GateCliv1 {
     //标准起始时间 与golang的时间一致
     const TimeFormat:string = "2006-01-02 15:04:05";
@@ -60,16 +71,20 @@ namespace GateCliv1 {
         Success = 1,        //成功
         CannotUseSysId=2,   //不许使用系统保留操作码
         AlreadyReg = 3,     //已经注册无需再次注册
+        MsgNotComplete = 4, //消息不完整
     }
 
     export class GateCli {
+        private _id: number; //客户端id
         private _conn: WebSocket; //ws连接
+        private _codec: Codec; //编解码器
 
         //回调表
         private _callMap: Map<number, Function>;
 
         constructor(){
             this._callMap = new Map<number, Function>();
+            this._codec = new Codec();
         }
 
         //发消息
@@ -97,8 +112,34 @@ namespace GateCliv1 {
         //拨号
         public dial(addr: string): ErrorCode {
             let conn = new WebSocket(addr);
+            let codec = this._codec;
+            let callMap = this._callMap;
             if(conn) {
-                
+                conn.binaryType = 'arraybuffer';// 指定WebSocket接受ArrayBuffer实例作为参数
+                conn.onopen = function () {
+                    console.log("Send Text WS was opened.");
+                };
+                conn.onmessage = function (event) {
+                    let recv = event.data;
+                    let temp = codec.UnFormat(recv);
+                    let rsp = temp[0];
+                    let err = temp[1]
+                    if(err == ErrorCode.Success && rsp != null && callMap.has(rsp.opcode)){
+                        let f = callMap.get(rsp.opcode);
+                        f.call(f, rsp.content);
+                    }
+                    console.log("response text msg: " + rsp);
+                };
+                conn.onerror = function () {
+                    console.log("Send Text fired an error");
+                };
+                conn.onclose = function () {
+                    console.log("WebSocket instance closed.");
+                };
+
+                //验证客户端 todo
+                this._conn = conn;
+                return ErrorCode.Success;
             }
             return ErrorCode.Fail;
         }
@@ -161,32 +202,20 @@ namespace GateCliv1 {
 
     //消息类
     export class Message {
-        //消息总长
-        public len:number;
         //操作码
         public opcode:number;
         //发送者
         public sender:number;
-        //接收者长度
-        public recvLen:number;
         //接收者名单
-        public recvs:number[];
-        //时间戳
-        public timeStamp:number;
+        public recvs:Array<number>;
         //内容
         public content:string;
 
-        constructor(opcode:number, content:any, recvs:number[], ...sender:number[]) {
-            this.len = 0; 
-            this.opcode = opcode; 
+        constructor() {
+            this.opcode = 0; 
             this.sender = 0; 
-            if(sender.length > 0) {
-                this.sender = sender[0];
-            }
-            this.recvLen = 0; 
-            this.recvs = recvs; 
-            this.timeStamp = this.timeToTimeStamp(new Date().getTime()); 
-            this.content = content; 
+            this.recvs = new Array<number>(); 
+            this.content = ""; 
         }
 
         //返回指定时间到"2006-01-02 15:04:05"的秒数
@@ -198,69 +227,83 @@ namespace GateCliv1 {
     //编解码类
     export class Codec {
         //编码
-        public Format(msg:Message):[string, ErrorCode]{
-            let back = "";
-            let contentData = this.StringToBytes(JSON.stringify(msg.content));
-            let opData = msg.opcode<<32;
-            let recvLenData = msg.recvs.length * 8;
+        public Format(msg:Message):[any, ErrorCode]{
+            let back = new Array();
+            let opData = IntToBytes(msg.opcode);
+            let recvs = new Array();
+            msg.recvs.forEach((v, _)=>{
+                recvs.push(Uint64ToBytes(v));
+            })
+            let recvsLen = Uint16ToBytes(recvs.length);
+            let contentData = StringToBytes(JSON.stringify(msg.content));
+            let sender = Uint64ToBytes(msg.sender);
+            let totalLen = Uint16ToBytes(2+4+2+8+recvs.length+contentData.length)
+
+            back.push(totalLen, opData, recvsLen, sender, recvs, contentData);
             return [back, ErrorCode.Success];
         }
 
         //解码
-        public UnFormat(arg:string, content:any):[any, ErrorCode]{
-            let back = content;
-            return [back, ErrorCode.Success];
+        public UnFormat(arg:string):[Message, ErrorCode]{
+            let data = StringToBytes(arg);
+            if(data.length < 2+4+2+8 || data.length != this.ParseTotalLen(data)) {
+                return [null, ErrorCode.MsgNotComplete];
+            }
+            let msg = new Message();
+            msg.opcode = this.ParseOpCode(data);
+            msg.sender = this.ParseSender(data);
+            msg.recvs = this.ParseRecvs(data);
+            msg.content = this.ParseContent(data);
+            return [msg, ErrorCode.Success];
         }
 
-        //string转[]byte
-        public StringToBytes(str):any {
-            let bytes = new Array();
-            var len, c;
-            len = str.length;
-            for (var i = 0; i < len; i++) {
-                c = str.charCodeAt(i);
-                if (c >= 0x010000 && c <= 0x10FFFF) {
-                    bytes.push(((c >> 18) & 0x07) | 0xF0);
-                    bytes.push(((c >> 12) & 0x3F) | 0x80);
-                    bytes.push(((c >> 6) & 0x3F) | 0x80);
-                    bytes.push((c & 0x3F) | 0x80);
-                } else if (c >= 0x000800 && c <= 0x00FFFF) {
-                    bytes.push(((c >> 12) & 0x0F) | 0xE0);
-                    bytes.push(((c >> 6) & 0x3F) | 0x80);
-                    bytes.push((c & 0x3F) | 0x80);
-                } else if (c >= 0x000080 && c <= 0x0007FF) {
-                    bytes.push(((c >> 6) & 0x1F) | 0xC0);
-                    bytes.push((c & 0x3F) | 0x80);
-                } else {
-                    bytes.push(c & 0xFF);
-                }
+        //解析总长
+        public ParseTotalLen(data:any):number {
+            if(data.length < 2) {
+                return 0;
             }
-            return bytes;
+            let temp = <Uint8Array>data;
+            return BytesToUint16(temp.slice(0, 2));
         }
 
-        //[]byte转string
-        public ByteToString(byte:any): string {
-            if (typeof byte === 'string') {
-                return byte;
+        //解析操作码
+        public ParseOpCode(data:any):number {
+            let temp = <Uint8Array>data;
+            return BytesToInt(temp.slice(2, 5));
+        }
+
+        //解析发送者
+        public ParseSender(data:any):number {
+            let temp = <Uint8Array>data;
+            return BytesToUint64(temp.slice(7, 15));
+        }
+
+        //解析收信人长度
+        public ParseRecvsLen(data:any):number {
+            let temp = <Uint8Array>data;
+            let len = BytesToUint16(temp.slice(5,7));
+            return len;
+        }
+
+        //解析收信人
+        public ParseRecvs(data:any):Array<number> {
+            let back = new Array<number>();
+            let temp = <Uint8Array>data;
+            let len = this.ParseRecvsLen(data);
+            let recvData = temp.slice(15, len);
+            for(let i = 0; i < recvData.length; i+=8) {
+                back.push(BytesToUint64(recvData.slice(i, i+8)));
             }
-            var str = '',
-            _arr = byte;
-            for (var i = 0; i < _arr.length; i++) {
-                var one = _arr[i].toString(2),
-                v = one.match(/^1+?(?=0)/);
-                if (v && one.length == 8) {
-                    var bytesLength = v[0].length;
-                    var store = _arr[i].toString(2).slice(7 - bytesLength);
-                    for (var st = 1; st < bytesLength; st++) {
-                      store += _arr[st + i].toString(2).slice(2);
-                    }
-                    str += String.fromCharCode(parseInt(store, 2));
-                    i += bytesLength - 1;
-                } else {
-                    str += String.fromCharCode(_arr[i]);
-                }
-            }
-            return str;
+            return back;
+        }
+
+        //解析内容
+        public ParseContent(data:any):any {
+            let temp = <Uint8Array>data;
+            let start = 2 + 4 + 2 + 8;
+            let end = this.ParseRecvsLen(temp);
+            let contentData = temp.slice(start, end);
+            return JSON.parse(BytesToString(contentData));
         }
     }
 }

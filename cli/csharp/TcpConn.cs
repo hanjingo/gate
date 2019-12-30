@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net.Sockets;
-using UnityEngine;
 using System.Threading;
 
 public class TcpConn
@@ -41,26 +40,6 @@ public class TcpConn
     /// 一次update最多可处理的消息数量
     /// </summary>
     readonly static int OnceHandleMsgNum = 10;
-
-    /// <summary>
-    /// 是否启用心跳
-    /// </summary>
-    public bool DoHeartBit = false;
-
-    /// <summary>
-    /// 心跳周期(秒)
-    /// </summary>
-    public float PingInterval = 3;
-
-    /// <summary>
-    /// 上次发ping时间
-    /// </summary>
-    float lastPingTime = 0;
-
-    /// <summary>
-    /// 上次收pong时间
-    /// </summary>
-    float lastPongTime = 0;
 
     /// <summary>
     /// 消息委托
@@ -369,31 +348,6 @@ public class TcpConn
             if(msg != null)
                 HandleMsg(msg);
         }
-    }
-
-    /// <summary>
-    /// ping
-    /// </summary>
-    public void PingUpdate() { 
-        if(!DoHeartBit)
-            return;
-        if(Time.time - lastPingTime > PingInterval) { 
-            Msg msg = new Msg();
-            msg.Id = PingId;
-            msg.Content = new Ping();
-            Send(msg);
-            lastPingTime = Time.time;
-        }
-        if(Time.time - lastPongTime > PingInterval * 3)
-            Close();
-    }
-
-    /// <summary>
-    /// pong响应
-    /// </summary>
-    public void doPong(Msg msg) { 
-        Pong rsp = (Pong)msg.Content;
-        lastPongTime = Time.time;
     }
 
     /// <summary>
