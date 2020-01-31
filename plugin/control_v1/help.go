@@ -5,8 +5,6 @@ import (
 
 	"github.com/hanjingo/container"
 
-	"github.com/hanjingo/util"
-
 	"github.com/hanjingo/gate/com"
 	pv4 "github.com/hanjingo/protocol/v4"
 )
@@ -16,14 +14,19 @@ func (ctl *ControllerV1) reg() {
 		return
 	}
 	m := ctl.info.CallBackMap
-	m[com.AGENT_CONNECT] = append(m[com.AGENT_CONNECT], ctl.onNewAgent)  //建立端点
-	m[com.AGENT_CLOSE] = append(m[com.AGENT_CLOSE], ctl.onAgentClose)    //关闭端点
-	m[OP_NEW_AGENT_REQ] = append(m[OP_NEW_AGENT_REQ], ctl.onNewAgentReq) //建立端点请求
-	m[OP_ROUTE] = append(m[OP_ROUTE], ctl.onRoute)                       //处理路由
-	m[OP_PING] = append(m[OP_PING], ctl.onPing)                          //处理ping
-	m[OP_SUB] = append(m[OP_SUB], ctl.onSub)                             //处理订阅
-	m[OP_UNSUB] = append(m[OP_UNSUB], ctl.onUnSub)                       //处理取消订阅
-	m[OP_PUB] = append(m[OP_PUB], ctl.onPub)                             //处理发布
+	m[com.AGENT_CONNECT] = ctl.onNewAgent   //建立端点
+	m[com.AGENT_CLOSE] = ctl.onAgentClose   //关闭端点
+	m[OP_NEW_AGENT_REQ] = ctl.onNewAgentReq //建立端点请求
+	m[OP_ROUTE] = ctl.onRoute               //处理路由
+	m[OP_PING] = ctl.onPing                 //处理ping
+	m[OP_SUB] = ctl.onSub                   //处理订阅
+	m[OP_UNSUB] = ctl.onUnSub               //处理取消订阅
+	m[OP_PUB] = ctl.onPub                   //处理发布
+}
+
+//预处理
+func callBefore(agent com.AgentI, data []byte) {
+	//todo
 }
 
 //新建agent
@@ -46,7 +49,7 @@ func (c *ControllerV1) onNewAgent(agent com.AgentI) {
 
 //关闭agent
 func (c *ControllerV1) onAgentClose(agent com.AgentI) {
-	if info, ok := c.agents[agent.GetId()]; ok {
+	if info, ok := c.agents()[agent.GetId()]; ok {
 		info.subTopics = nil
 		info.apis = nil
 	}
@@ -77,7 +80,7 @@ func (ctl *ControllerV1) onNewAgentReq(agent com.AgentI, data []byte) ([]byte, e
 			subTopics: container.NewSet(),
 			apis:      container.NewSet(),
 		}
-		ctl.agents[info.id] = info
+		ctl.agents()[info.id] = info
 	}
 	return nil, nil
 }
@@ -89,7 +92,7 @@ func (ctl *ControllerV1) onRoute(agent com.AgentI, data []byte) ([]byte, error) 
 		return nil, err
 	}
 	for _, recv := range recvs {
-		if info, ok := ctl.agents[recv]; ok {
+		if info, ok := ctl.agents()[recv]; ok {
 			info.agent.Write(data)
 		}
 	}
@@ -105,10 +108,9 @@ func (ctl *ControllerV1) onPing(agent com.AgentI, data []byte) ([]byte, error) {
 	}
 	//发送pong
 	msg2 := &pv4.Messager{
-		OpCode:    OP_PONG,
-		Receiver:  []uint64{msg1.Sender},
-		TimeStamp: util.TimeDurToMilliSecond(time.Now().Sub(com.START_TIME)),
-		Content:   &MsgPong{},
+		OpCode:   OP_PONG,
+		Receiver: []uint64{msg1.Sender},
+		Content:  &MsgPong{},
 	}
 	data2, err := ctl.codec.Format(msg2)
 	if err != nil {
@@ -125,7 +127,7 @@ func (ctl *ControllerV1) onSub(agent com.AgentI, data []byte) ([]byte, error) {
 		return data, err
 	}
 	content := msg.Content.(*MsgSub)
-	if _, ok := ctl.agents[agent.GetId()]; ok {
+	if _, ok := ctl.agents()[agent.GetId()]; ok {
 		for _, topic := range content.Topics {
 			if _, ok := ctl.subAgents[topic]; !ok {
 				ctl.subAgents[topic] = container.NewSet()
@@ -143,7 +145,7 @@ func (ctl *ControllerV1) onUnSub(agent com.AgentI, data []byte) ([]byte, error) 
 		return data, err
 	}
 	content := msg.Content.(*MsgUnSub)
-	if info, ok := ctl.agents[agent.GetId()]; ok {
+	if info, ok := ctl.agents()[agent.GetId()]; ok {
 		for _, topic := range content.Topics {
 			info.subTopics.Del(topic)
 			if agents, ok := ctl.subAgents[topic]; ok {

@@ -34,10 +34,15 @@ const (
 	OP_PUB          = MASK_SERVER | 0x5 //发布
 
 	//控制码
-	OP_CLOSE_AGENT              = MASK_CONTROL | 0x1 //关闭节点
-	OP_SET_FILT_AGENT           = MASK_CONTROL | 0x2 //过滤
-	OP_SET_UNFILT_AGENT         = MASK_CONTROL | 0x3 //解除过滤
-	OP_SET_AGENT_LIMIT_STREAM   = MASK_CONTROL | 0x4 //设置节点控流限制
-	OP_SET_AGENT_UNLIMIT_STREAM = MASK_CONTROL | 0x5 //设置节点不控流
-	OP_CHANGE_PERM              = MASK_CONTROL | 0x6 //变更权限
+	OP_CLOSE_AGENT = MASK_CONTROL | 0x1 //关闭节点
+
+	OP_SET_FILT_AGENT   = MASK_CONTROL | 0x2 //设置过滤
+	OP_SET_UNFILT_AGENT = MASK_CONTROL | 0x3 //解除过滤
+	OP_ON_FILT          = MASK_CONTROL | 0x4 //过滤消息
+
+	OP_SET_AGENT_LIMIT_STREAM   = MASK_CONTROL | 0x5 //设置节点控流限制
+	OP_SET_AGENT_UNLIMIT_STREAM = MASK_CONTROL | 0x6 //设置节点不控流
+	OP_ON_STREAM                = MASK_CONTROL | 0x7 //控流消息
+
+	OP_CHANGE_PERM = MASK_CONTROL | 0x8 //变更权限
 )

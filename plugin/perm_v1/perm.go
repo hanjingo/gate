@@ -1,20 +1,23 @@
-package filt_v1
+package perm_v1
 
 import (
 	ps "github.com/hanjingo/plugin_system"
+	pv4 "github.com/hanjingo/protocol/v4"
 )
 
-const NAME = "FiltV1"   //插件名字
+const NAME = "PermV1"   //插件名字
 const VERSION = "1.0.0" //插件版本
 
-type FiltV1 struct {
-	name string
-	info *ps.PluginInfo
+type PermV1 struct {
+	name  string
+	codec *pv4.Codec
+	info  *ps.PluginInfo
 }
 
 func New() ps.PluginI {
-	back := &FiltV1{
-		name: NAME,
+	back := &PermV1{
+		name:  NAME,
+		codec: pv4.NewCodec(),
 	}
 	back.info = &ps.PluginInfo{
 		Id:          back.name,
@@ -27,10 +30,10 @@ func New() ps.PluginI {
 	return back
 }
 
-func (f *FiltV1) Info() *ps.PluginInfo {
-	return f.info
+func (p *PermV1) Info() *ps.PluginInfo {
+	return p.info
 }
 
-func (f *FiltV1) agents() map[interface{}]*agentInfo {
+func (p *PermV1) agents() map[interface{}]*agentInfo {
 	return agents
 }
