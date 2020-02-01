@@ -5,12 +5,12 @@ import (
 )
 
 type agentV1 struct {
-	id      interface{}   //id
-	conn    network.ConnI //连接
-	isValid bool          //是否可用
+	id      interface{}      //id
+	conn    network.SessionI //连接
+	isValid bool             //是否可用
 }
 
-func newAgentV1(c network.ConnI) *agentV1 {
+func newAgentV1(c network.SessionI) *agentV1 {
 	back := &agentV1{
 		id:      c.GetId(),
 		conn:    c,

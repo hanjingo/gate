@@ -1,11 +1,11 @@
 package gate
 
 import (
-	"fmt"
 	"net/http"
 	"sync"
 
 	"github.com/hanjingo/gate/plugin"
+	"github.com/hanjingo/logger"
 
 	"github.com/hanjingo/gate/com"
 	"github.com/hanjingo/network"
@@ -13,7 +13,10 @@ import (
 	pv4 "github.com/hanjingo/protocol/v4"
 )
 
+var log = logger.GetDefaultLogger()
+
 type Gate struct {
+	wg      *sync.WaitGroup
 	conf    *GateConfig                     //配置
 	agents  map[interface{}]com.AgentI      //端点集合
 	servers map[interface{}]network.ServerI //tcp/ws/http服务器集合
@@ -23,6 +26,7 @@ type Gate struct {
 
 func NewGate(conf *GateConfig) *Gate {
 	back := &Gate{
+		wg:      new(sync.WaitGroup),
 		conf:    conf,
 		agents:  make(map[interface{}]com.AgentI),
 		servers: make(map[interface{}]network.ServerI),
@@ -33,7 +37,7 @@ func NewGate(conf *GateConfig) *Gate {
 	//加载插件
 	for _, e := range conf.Plugins {
 		if f, ok := plugin.GetPlugins()[e.Name]; ok {
-			fmt.Println("插件:", e.Name, "被加载")
+			log.Info("插件:%v 被加载", e.Name)
 			if err := back.hubs.LoadPlugin(f()); err != nil {
 				panic(err)
 			}
@@ -43,13 +47,27 @@ func NewGate(conf *GateConfig) *Gate {
 }
 
 //跑起来
-func (gate *Gate) Run(wg *sync.WaitGroup) {
-	//监听http
-	http.ListenAndServe(gate.conf.ConfServAddr, nil)
+func (gate *Gate) Run() {
+	//监听cmd服务器
+	if err := http.ListenAndServe(gate.conf.ConfServAddr, nil); err != nil {
+		panic(err)
+	}
+	log.Info("cmd服务器已启动...")
+
+	//监听tcp/ws
+	for name, s := range gate.servers {
+		s.Run(gate.wg)
+		log.Info("服务器:%v 已启动", name)
+	}
+}
+
+//卡死
+func (gate *Gate) Wait() {
+	gate.wg.Wait()
 }
 
 //处理新建连接
-func (gate *Gate) onNewConn(c network.ConnI) {
+func (gate *Gate) onNewConn(c network.SessionI) {
 	agent := newAgentV1(c)
 	if gate.hubs != nil {
 		for _, hub := range gate.hubs.GetHubs() {
@@ -60,7 +78,7 @@ func (gate *Gate) onNewConn(c network.ConnI) {
 }
 
 //处理连接断开
-func (gate *Gate) onConnClose(c network.ConnI) {
+func (gate *Gate) onConnClose(c network.SessionI) {
 	agent, ok := gate.agents[c.GetId()]
 	if !ok {
 		return
@@ -84,9 +102,8 @@ func (gate *Gate) handleMsg(agentId uint64, data []byte) {
 	if err != nil {
 		return
 	}
-	//屏蔽系统消息
+	//捕获系统消息
 	if opcode&com.MASK_SYS != 0x0 {
-		return
 	}
 	//发给插件
 	if gate.hubs != nil {

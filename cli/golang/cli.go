@@ -3,13 +3,9 @@ package golang
 import (
 	"errors"
 	"fmt"
-	"time"
-
-	"github.com/hanjingo/gate/com"
-	ctlv1 "github.com/hanjingo/gate/plugin/control_v1"
-	"github.com/hanjingo/util"
 
 	ws "github.com/gorilla/websocket"
+	ctlv1 "github.com/hanjingo/gate/plugin/control_v1"
 	"github.com/hanjingo/network"
 	"github.com/hanjingo/protocol"
 	pv4 "github.com/hanjingo/protocol/v4"
@@ -17,13 +13,12 @@ import (
 
 type CallFunc func(interface{})
 
-func writeMsg(conn network.ConnI, codec protocol.CodecI, opcode uint32, sender uint64, content interface{}, recvs []uint64) error {
+func writeMsg(conn network.SessionI, codec protocol.CodecI, opcode uint32, sender uint64, content interface{}, recvs []uint64) error {
 	p := &pv4.Messager{
-		OpCode:    opcode,
-		Sender:    sender,
-		Receiver:  recvs,
-		TimeStamp: util.TimeDurToMilliSecond(time.Now().Sub(com.START_TIME)),
-		Content:   content,
+		OpCode:   opcode,
+		Sender:   sender,
+		Receiver: recvs,
+		Content:  content,
 	}
 	data, err := codec.Format(p)
 	if err != nil {
@@ -32,7 +27,7 @@ func writeMsg(conn network.ConnI, codec protocol.CodecI, opcode uint32, sender u
 	return conn.WriteMsg(data)
 }
 
-func readMsg(conn network.ConnI, codec protocol.CodecI, content interface{}) error {
+func readMsg(conn network.SessionI, codec protocol.CodecI, content interface{}) error {
 	data, err := conn.ReadMsg()
 	if err != nil {
 		return err
@@ -43,13 +38,13 @@ func readMsg(conn network.ConnI, codec protocol.CodecI, content interface{}) err
 //网关客户端
 type GateCli struct {
 	id                uint64
-	conn              network.ConnI
+	conn              network.SessionI
 	callMap           map[uint32]CallFunc
 	codec             protocol.CodecI
-	connCloseCallback func(network.ConnI)
+	connCloseCallback func(network.SessionI)
 }
 
-func NewGateCli(f func(network.ConnI)) *GateCli {
+func NewGateCli(f func(network.SessionI)) *GateCli {
 	back := &GateCli{
 		callMap:           make(map[uint32]CallFunc),
 		codec:             pv4.NewCodec(),
@@ -68,8 +63,8 @@ func (cli *GateCli) RegHandler(opcdoe uint32, f CallFunc) error {
 }
 
 //拨号
-func (cli *GateCli) Dial(dialType string, addr string, token string, conf *network.ConnConfig) error {
-	var conn network.ConnI
+func (cli *GateCli) Dial(dialType string, addr string, token string, conf *network.SessionConfig) error {
+	var conn network.SessionI
 	var err error
 	c, _, err := ws.DefaultDialer.Dial(addr, nil)
 	if err != nil {
@@ -97,7 +92,7 @@ func (cli *GateCli) Dial(dialType string, addr string, token string, conf *netwo
 	return nil
 }
 
-func (cli *GateCli) onConnClose(c network.ConnI) {
+func (cli *GateCli) onConnClose(c network.SessionI) {
 	if cli.connCloseCallback != nil {
 		cli.connCloseCallback(c)
 	}

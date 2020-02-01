@@ -45,33 +45,50 @@ func (gate *Gate) check(w http.ResponseWriter, r *http.Request) bool {
 
 //开启服务器
 func (gate *Gate) openServer(w http.ResponseWriter, r *http.Request) {
+	log.Debug("openServer>>")
 	if !gate.check(w, r) {
+		log.Error("开启服务器时,凭证检查失败")
 		return
 	}
 	confStr := r.Form.Get(ARG_CONF)
-	conf := &network.ServerConfig{ConnConfig: &network.ConnConfig{}}
+	conf := &network.ServerConfig{SessionConfig: &network.SessionConfig{}}
 	if err := json.Unmarshal([]byte(confStr), conf); err != nil {
+		log.Error("参数解析失败,错误:%v", err)
 		http.Error(w, "http解析参数失败", 405)
+		return
+	}
+	log.Debug("openServer conf:%v", conf)
+	if !conf.Check() {
+		log.Error("开启服务器:%v 时配置检查失败", conf.Name)
 		return
 	}
 	switch strings.ToUpper(conf.Type) {
 	case "WS":
 		s, err := network.NewWsServer(conf, gate.onConnClose, gate.onNewConn, gate.handleMsg)
 		if err != nil {
+			log.Error("服务器启动失败,错误:%v", err)
 			return
 		}
+		s.Run(gate.wg)
 		gate.servers[s.Name] = s
+		log.Info("服务器:%v 启动", s.Name)
 	case "TCP":
 		s, err := network.NewTcpServer(conf, gate.onConnClose, gate.onNewConn, gate.handleMsg)
 		if err != nil {
+			log.Error("服务器启动失败,错误:%v", err)
 			return
 		}
+		s.Run(gate.wg)
 		gate.servers[s.Name] = s
+		log.Info("服务器:%v 启动", s.Name)
+	default:
+		log.Error("开启服务时,未知服务类型:%v", conf.Type)
 	}
 }
 
 //关闭服务器
 func (gate *Gate) closeServer(w http.ResponseWriter, r *http.Request) {
+	log.Debug("closeServer>>")
 	if !gate.check(w, r) {
 		return
 	}
@@ -85,8 +102,9 @@ func (gate *Gate) closeServer(w http.ResponseWriter, r *http.Request) {
 
 //获得网关信息
 func (gate *Gate) getGateInfo(w http.ResponseWriter, r *http.Request) {
+	log.Debug("getGateInfo>>")
 	if !gate.check(w, r) {
 		return
 	}
-	
+	gate.info() //todo
 }

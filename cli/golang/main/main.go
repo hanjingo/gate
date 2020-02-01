@@ -12,8 +12,8 @@ import (
 func main() {
 	for i := 0; i < 10000; i++ {
 		go func() {
-			cli := golang.NewGateCli()
-			conf := &network.ConnConfig{
+			cli := golang.NewGateCli(nil)
+			conf := &network.SessionConfig{
 				WaitTimeout:  3000,
 				WChanCapa:    100,
 				RChanCapa:    100,
