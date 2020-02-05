@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	ws "github.com/gorilla/websocket"
-	ctlv1 "github.com/hanjingo/gate/plugin/control_v1"
 	"github.com/hanjingo/network"
 	"github.com/hanjingo/protocol"
 	pv4 "github.com/hanjingo/protocol/v4"
@@ -14,13 +13,13 @@ import (
 type CallFunc func(interface{})
 
 func writeMsg(conn network.SessionI, codec protocol.CodecI, opcode uint32, sender uint64, content interface{}, recvs []uint64) error {
-	p := &pv4.Messager{
+	msg := &pv4.Messager{
 		OpCode:   opcode,
 		Sender:   sender,
 		Receiver: recvs,
 		Content:  content,
 	}
-	data, err := codec.Format(p)
+	data, err := codec.Format(msg)
 	if err != nil {
 		return err
 	}
@@ -32,7 +31,10 @@ func readMsg(conn network.SessionI, codec protocol.CodecI, content interface{}) 
 	if err != nil {
 		return err
 	}
-	return codec.UnFormat(data, content)
+	msg := &pv4.Messager{
+		Content: content,
+	}
+	return codec.UnFormat(data, msg)
 }
 
 //网关客户端
@@ -74,12 +76,17 @@ func (cli *GateCli) Dial(dialType string, addr string, token string, conf *netwo
 	if err != nil {
 		return err
 	}
+
+	if err := readMsg(conn, cli.codec, &MsgAgentConnSucc{}); err != nil {
+		return err
+	}
+
 	//发请求
-	if err := writeMsg(conn, cli.codec, OP_NEW_AGENT, 0, &ctlv1.MsgNewAgentReq{Token: token}, nil); err != nil {
+	if err := writeMsg(conn, cli.codec, OP_NEW_AGENT_REQ, 0, &MsgNewAgentReq{Token: token}, nil); err != nil {
 		return err
 	}
 	//收回复
-	rsp := &ctlv1.MsgNewAgentRsp{}
+	rsp := &MsgNewAgentRsp{}
 	if err := readMsg(conn, cli.codec, rsp); err != nil {
 		return err
 	}
@@ -106,7 +113,7 @@ func (cli *GateCli) Route(msg interface{}, recvs ...uint64) error {
 //ping
 func (cli *GateCli) Ping() error {
 	return writeMsg(cli.conn, cli.codec, OP_PING, cli.id,
-		&ctlv1.MsgPing{}, nil)
+		&MsgPing{}, nil)
 }
 
 //请求
@@ -117,7 +124,7 @@ func (cli *GateCli) Req(opCode uint32, msg interface{}, recv ...uint64) error {
 //订阅
 func (cli *GateCli) Sub(topics ...string) error {
 	return writeMsg(cli.conn, cli.codec, OP_SUB, cli.id,
-		&ctlv1.MsgSub{Topics: topics}, nil)
+		&MsgSub{Topics: topics}, nil)
 }
 
 //发布
@@ -128,19 +135,19 @@ func (cli *GateCli) Pub() {
 //取消订阅
 func (cli *GateCli) UnSub(topics ...string) error {
 	return writeMsg(cli.conn, cli.codec, OP_UNSUB, cli.id,
-		&ctlv1.MsgUnSub{Topics: topics}, nil)
+		&MsgUnSub{Topics: topics}, nil)
 }
 
 //注册服务
 func (cli *GateCli) RegApi(apis ...uint32) error {
 	return writeMsg(cli.conn, cli.codec, OP_REG_SERVER, cli.id,
-		&ctlv1.MsgRegApi{Apis: apis, Id: cli.id}, nil)
+		&MsgRegApi{Apis: apis, Id: cli.id}, nil)
 }
 
 //取消注册
 func (cli *GateCli) UnRegApi(apis ...uint32) error {
 	return writeMsg(cli.conn, cli.codec, OP_UNREG_SERVER, cli.id,
-		&ctlv1.MsgUnRegApi{Apis: apis, Id: cli.id}, nil)
+		&MsgUnRegApi{Apis: apis, Id: cli.id}, nil)
 }
 
 //多播
@@ -156,5 +163,5 @@ func (cli *GateCli) BroadCast(msg interface{}) error {
 //控制
 func (cli *GateCli) Control(cmd uint32, args ...interface{}) error {
 	return writeMsg(cli.conn, cli.codec, cmd, cli.id,
-		&ctlv1.MsgControl{Cmd: cmd, Args: args}, nil)
+		&MsgControl{Cmd: cmd, Args: args}, nil)
 }

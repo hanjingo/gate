@@ -1,9 +1,9 @@
 http://127.0.0.1:10086/open_server?user_name=007&&password=123456@&&conf=
 {
-    "Type":"tcp",
-    "Name":"tcp1",
+    "Type":"ws",
+    "Name":"ws1",
     "Ip":"127.0.0.1",
-    "Port":10287,
+    "Port":10187,
     "HandShakeTimeout":10000,
     "ReadTimeout":3000,
     "WriteTimeout":3000,

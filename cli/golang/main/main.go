@@ -9,8 +9,10 @@ import (
 	"github.com/hanjingo/gate/cli/golang"
 )
 
+// for win: go build -o cli.exe main.go
+
 func main() {
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 1; i++ {
 		go func() {
 			cli := golang.NewGateCli(nil)
 			conf := &network.SessionConfig{
@@ -25,7 +27,7 @@ func main() {
 			fmt.Println("拨号结果:", cli.Dial("", "ws://127.0.0.1:10187", "", conf))
 		}()
 
-		time.Sleep(time.Duration(10) * time.Millisecond)
+		time.Sleep(time.Duration(10000) * time.Millisecond)
 	}
 
 }

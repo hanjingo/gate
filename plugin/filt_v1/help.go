@@ -1,8 +1,6 @@
 package filt_v1
 
 import (
-	"errors"
-
 	"github.com/hanjingo/gate/com"
 )
 
@@ -19,29 +17,27 @@ func (f *FiltV1) reg() {
 }
 
 //建立端点
-func (f *FiltV1) onNewAgent(agent com.AgentI) error {
+func (f *FiltV1) onNewAgent(agent com.AgentI) {
 	info := &agentInfo{
 		id:    agent.GetId(),
 		bFilt: false,
 	}
 	f.agents()[info.id] = info
-	return nil
 }
 
 //端点断开
-func (f *FiltV1) onAgentClose(agent com.AgentI) error {
+func (f *FiltV1) onAgentClose(agent com.AgentI) {
 	delete(f.agents(), agent.GetId())
-	return nil
 }
 
 //过滤
-func (f *FiltV1) onFilt(agent com.AgentI, data []byte) ([]byte, error) {
+func (f *FiltV1) onFilt(agent com.AgentI, data []byte) {
 	if info, ok := f.agents()[agent.GetId()]; ok {
 		if info.bFilt {
-			return nil, errors.New("消息已经被过滤")
+			data = []byte{}
+			return
 		}
 	}
-	return data, nil
 }
 
 //设置过滤

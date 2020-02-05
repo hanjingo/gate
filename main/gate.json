@@ -24,5 +24,27 @@
             "CacheCapa": 10000,
             "OpenLevels":[1, 2, 3, 4, 5]
         }
+    },
+    "Servers":{
+        "ws1":{
+            "Type":"ws",
+            "Name":"ws1",
+            "Ip":"127.0.0.1",
+            "Port":10187,
+            "HandShakeTimeout":10000,
+            "ReadTimeout":3000,
+            "WriteTimeout":3000,
+            "MaxHeaderBytes":4096,
+            "ScanConnSetDur":1000,
+            "SessionConfig":{
+                "WaitTimeout":1000,
+                "WChanCapa":100,
+                "RChanCapa":100,
+                "ReadBufCapa":8192,
+                "WriteBufCapa":8192,
+                "ReadLen":1024,
+                "NoDelay":true
+            }
+        }
     }
 }

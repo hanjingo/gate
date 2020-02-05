@@ -1,5 +1,9 @@
 package control_v1
 
+type MsgAgentConnSucc struct {
+	Id uint64
+}
+
 type MsgNewAgentReq struct {
 	Token string
 }
@@ -38,6 +42,6 @@ type MsgUnRegApi struct {
 }
 
 type MsgControl struct {
-	Cmd uint32
+	Cmd  uint32
 	Args []interface{}
 }

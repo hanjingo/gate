@@ -14,14 +14,14 @@ func (ctl *ControllerV1) reg() {
 		return
 	}
 	m := ctl.info.CallBackMap
-	m[com.AGENT_CONNECT] = ctl.onNewAgent   //建立端点
-	m[com.AGENT_CLOSE] = ctl.onAgentClose   //关闭端点
-	m[OP_NEW_AGENT_REQ] = ctl.onNewAgentReq //建立端点请求
-	m[OP_ROUTE] = ctl.onRoute               //处理路由
-	m[OP_PING] = ctl.onPing                 //处理ping
-	m[OP_SUB] = ctl.onSub                   //处理订阅
-	m[OP_UNSUB] = ctl.onUnSub               //处理取消订阅
-	m[OP_PUB] = ctl.onPub                   //处理发布
+	m[com.AGENT_CONNECT] = ctl.onAgentConnect //端点连接
+	m[com.AGENT_CLOSE] = ctl.onAgentClose     //关闭端点
+	m[OP_NEW_AGENT_REQ] = ctl.onNewAgentReq   //建立端点请求
+	m[OP_ROUTE] = ctl.onRoute                 //处理路由
+	m[OP_PING] = ctl.onPing                   //处理ping
+	m[OP_SUB] = ctl.onSub                     //处理订阅
+	m[OP_UNSUB] = ctl.onUnSub                 //处理取消订阅
+	m[OP_PUB] = ctl.onPub                     //处理发布
 }
 
 //预处理
@@ -30,10 +30,11 @@ func callBefore(agent com.AgentI, data []byte) {
 }
 
 //新建agent
-func (c *ControllerV1) onNewAgent(agent com.AgentI) {
+func (c *ControllerV1) onAgentConnect(agent com.AgentI) {
+	log.Debug("onAgentConnect>> opcode:%b", com.AGENT_CONNECT)
 	go func() {
 		tm := time.NewTimer(time.Duration(c.newAgentWaitTimeout) * time.Millisecond)
-		tm1 := time.NewTimer(time.Duration(10 * time.Millisecond))
+		tm1 := time.NewTimer(time.Duration(3000 * time.Millisecond))
 		defer agent.Close()
 		select {
 		case <-tm.C:
@@ -45,10 +46,25 @@ func (c *ControllerV1) onNewAgent(agent com.AgentI) {
 			return
 		}
 	}()
+
+	ntf := &MsgAgentConnSucc{Id: agent.GetId().(uint64)}
+	msg := &pv4.Messager{
+		OpCode:  OP_AGENT_CONNECT_SUCCESS,
+		Content: ntf,
+	}
+	data, err := c.codec.Format(msg)
+	if err != nil {
+		log.Error("连接建立时,格式化返回消息失败,错误:%v", err)
+		return
+	}
+	if err := agent.Write(data); err != nil {
+		log.Error("连接建立时,返回消息失败,错误:%v", err)
+	}
 }
 
 //关闭agent
 func (c *ControllerV1) onAgentClose(agent com.AgentI) {
+	log.Debug("onAgentClose>>")
 	if info, ok := c.agents()[agent.GetId()]; ok {
 		info.subTopics = nil
 		info.apis = nil
@@ -56,13 +72,14 @@ func (c *ControllerV1) onAgentClose(agent com.AgentI) {
 }
 
 //连接验证
-func (ctl *ControllerV1) onNewAgentReq(agent com.AgentI, data []byte) ([]byte, error) {
+func (ctl *ControllerV1) onNewAgentReq(agent com.AgentI, data []byte) {
+	log.Debug("onNewAgentReq>>")
 	msg := &pv4.Messager{Content: &MsgNewAgentReq{}}
 	if err := ctl.codec.UnFormat(data, msg); err != nil {
-		return nil, err
+		log.Error("连接验证时,反格式化失败,错误:%v", err)
+		return
 	}
 	//验证 todo
-
 	rsp := &MsgNewAgentRsp{Result: true, Id: agent.GetId().(uint64)}
 	msg1 := &pv4.Messager{
 		OpCode:  OP_NEW_AGENT_RSP,
@@ -70,7 +87,8 @@ func (ctl *ControllerV1) onNewAgentReq(agent com.AgentI, data []byte) ([]byte, e
 	}
 	data1, err := ctl.codec.Format(msg1)
 	if err != nil {
-		return nil, err
+		log.Error("连接验证时,格式化返回失败,错误:%v", err)
+		return
 	}
 	if err := agent.Write(data1); err != nil {
 		info := &agentInfo{
@@ -82,29 +100,31 @@ func (ctl *ControllerV1) onNewAgentReq(agent com.AgentI, data []byte) ([]byte, e
 		}
 		ctl.agents()[info.id] = info
 	}
-	return nil, nil
 }
 
 //处理路由
-func (ctl *ControllerV1) onRoute(agent com.AgentI, data []byte) ([]byte, error) {
+func (ctl *ControllerV1) onRoute(agent com.AgentI, data []byte) {
+	log.Debug("onRoute>>")
 	recvs, err := ctl.codec.ParseRecv(data)
 	if err != nil {
-		return nil, err
+		log.Debug("路由时解析请求失败,错误:%v", err)
+		return
 	}
 	for _, recv := range recvs {
 		if info, ok := ctl.agents()[recv]; ok {
 			info.agent.Write(data)
 		}
 	}
-	return data, nil
 }
 
 //处理ping
-func (ctl *ControllerV1) onPing(agent com.AgentI, data []byte) ([]byte, error) {
+func (ctl *ControllerV1) onPing(agent com.AgentI, data []byte) {
+	log.Debug("onPing>>")
 	//解析ping
 	msg1 := &pv4.Messager{Content: &MsgPing{}}
 	if err := ctl.codec.UnFormat(data, msg1); err != nil {
-		return nil, err
+		log.Error("处理ping时反格式化失败,错误:%v", err)
+		return
 	}
 	//发送pong
 	msg2 := &pv4.Messager{
@@ -114,17 +134,19 @@ func (ctl *ControllerV1) onPing(agent com.AgentI, data []byte) ([]byte, error) {
 	}
 	data2, err := ctl.codec.Format(msg2)
 	if err != nil {
-		return nil, err
+		log.Error("处理ping时格式化返回失败,错误:%v", err)
+		return
 	}
 	agent.Write(data2)
-	return data, nil
 }
 
 //处理订阅信息
-func (ctl *ControllerV1) onSub(agent com.AgentI, data []byte) ([]byte, error) {
+func (ctl *ControllerV1) onSub(agent com.AgentI, data []byte) {
+	log.Debug("onSub>>")
 	msg := &pv4.Messager{Content: &MsgSub{}}
 	if err := ctl.codec.UnFormat(data, msg); err != nil {
-		return data, err
+		log.Error("处理订阅时,反格式化请求失败,错误:%v", err)
+		return
 	}
 	content := msg.Content.(*MsgSub)
 	if _, ok := ctl.agents()[agent.GetId()]; ok {
@@ -135,14 +157,15 @@ func (ctl *ControllerV1) onSub(agent com.AgentI, data []byte) ([]byte, error) {
 			ctl.subAgents[topic].Add(agent.GetId())
 		}
 	}
-	return data, nil
 }
 
 //处理取消订阅信息
-func (ctl *ControllerV1) onUnSub(agent com.AgentI, data []byte) ([]byte, error) {
+func (ctl *ControllerV1) onUnSub(agent com.AgentI, data []byte) {
+	log.Debug("onUnSub>>")
 	msg := &pv4.Messager{Content: &MsgUnSub{}}
 	if err := ctl.codec.UnFormat(data, msg); err != nil {
-		return data, err
+		log.Error("取消订阅时反格式化失败,错误:%v", err)
+		return
 	}
 	content := msg.Content.(*MsgUnSub)
 	if info, ok := ctl.agents()[agent.GetId()]; ok {
@@ -156,14 +179,15 @@ func (ctl *ControllerV1) onUnSub(agent com.AgentI, data []byte) ([]byte, error) 
 			}
 		}
 	}
-	return data, nil
 }
 
 //处理发布消息
-func (ctl *ControllerV1) onPub(agent com.AgentI, data []byte) ([]byte, error) {
+func (ctl *ControllerV1) onPub(agent com.AgentI, data []byte) {
+	log.Debug("onPub>>")
 	msg := &pv4.Messager{Content: &MsgPub{}}
 	if err := ctl.codec.UnFormat(data, msg); err != nil {
-		return data, err
+		log.Error("处理发布时解析请求失败,错误:%v", err)
+		return
 	}
 	content := msg.Content.(*MsgPub)
 	if recvs, ok := ctl.subAgents[content.Topic]; ok {
@@ -175,5 +199,4 @@ func (ctl *ControllerV1) onPub(agent com.AgentI, data []byte) ([]byte, error) {
 			info.agent.Write(data)
 		})
 	}
-	return data, nil
 }
