@@ -5,9 +5,9 @@ namespace GateCliv1 {
     enum PermMask{
         MASK = 0x1fffffff,      //权限掩码过滤器
         ZERO = 0x0,             //0权限掩码
-        NORMAL = 0x20000000,    //普通权限掩码
-        CLI = 0x40000000,       //客户端权限掩码
-        SERVER = 0x60000000,    //服务端权限掩码
+        NORMAL = 0x10000000,    //普通权限掩码
+        CLI = 0x20000000,       //客户端权限掩码
+        SERVER = 0x40000000,    //服务端权限掩码
         CONTROL = 0x80000000,   //控制网关权限掩码
         SYS = 0xa0000000,       //系统权限掩码
     }
@@ -22,8 +22,9 @@ namespace GateCliv1 {
         ROUTE = PermMask.NORMAL|0x1,              //路由
         PING = PermMask.NORMAL|0x2,               //ping
         PONG = PermMask.NORMAL|0x3,               //pong
-        NEW_AGENT = PermMask.NORMAL|0x4,          //建立端点
+        NEW_AGENT_REQ = PermMask.NORMAL|0x4,      //建立端点请求
         NEW_AGENT_RSP = PermMask.NORMAL|0x5,      //建立端点返回
+        AGENT_CONNECT_SUCCESS = PermMask.NORMAL|0x6, //连接成功通知
 
         //客户端
         SUB = PermMask.CLI|0x1,                   //订阅
@@ -38,11 +39,16 @@ namespace GateCliv1 {
 
         //控制码
         CLOSE_AGENT = PermMask.CONTROL|0x1,              //关闭节点
+
         SET_AGENT_FILTED = PermMask.CONTROL|0x2,         //过滤
         SET_AGENT_UNFILTED = PermMask.CONTROL|0x3,       //解除过滤
-        SET_AGENT_LIMIT_STREAM = PermMask.CONTROL|0x4,   //设置节点控流限制
-        SET_AGENT_UNLIMIT_STREAM = PermMask.CONTROL|0x5, //设置节点不限流
-        CHANGE_PERM = PermMask.CONTROL|0x6,              //变更权限
+        ON_FILT = PermMask.CONTROL|0x4,                  //过滤消息
+
+        SET_AGENT_LIMIT_STREAM = PermMask.CONTROL|0x5,   //设置节点限流
+        SET_AGENT_UNLIMIT_STREAM = PermMask.CONTROL|0x6, //设置节点不限流
+        ON_STREAM = PermMask.CONTROL|0x7,                //控流
+
+        CHANGE_PERM = PermMask.CONTROL|0x8, //变更权限
 
         //系统码
         SYS = PermMask.SYS|0x1,
