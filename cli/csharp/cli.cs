@@ -1,4 +1,4 @@
-namespace GateCliv1 {
+namespace GateCli {
     /**
      * 权限掩码
      */
@@ -64,21 +64,38 @@ namespace GateCliv1 {
         AlreadyReg = 3,     //已经注册无需再次注册
     }
 
-
-
     /*
     * 网关客户端
     */
     public class GateCli {
         //编解码器
+        private Codec codec;
+
+        //连接
+        private TcpConn conn;
+
+        GateCli(){
+            this.conn = new TcpConn();
+        }
+
+        //写消息
+        private write(System.Object obj)
+        {
+            conn.write
+        }
+
+        //读消息
+        private read()
+        {
+
+        }
 
         //拨号
         public ErrorCode Dial(string ip, int port, string token) {
-            TcpConn conn = new TcpConn();
             conn.Connect(ip, port);
             NewAgentReq req = new NewAgentReq();
             req.Token = token;
-            conn.Send(req);
+            this.write(req);
         }
 
         //路由
@@ -137,10 +154,17 @@ namespace GateCliv1 {
         }
     }
 
+    //连接成功通知
+    class AgentConnSucc{
+        public UInt64 Id;
+    }
+
+    //连接验证请求
     class NewAgentReq {
         public string Token;
     }
 
+    //连接验证返回
     class NewAgentRsp {
         ErrorCode Result;
         uint64 id;
