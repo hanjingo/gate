@@ -2,7 +2,10 @@ package gate
 
 import (
 	"github.com/hanjingo/network"
+	util "github.com/hanjingo/util"
 )
+
+var gen = util.GetUuidGenerator()
 
 type agentV1 struct {
 	id      interface{}      //id
@@ -11,8 +14,12 @@ type agentV1 struct {
 }
 
 func newAgentV1(c network.SessionI) *agentV1 {
+	id, err := gen.GenerateUuidUint64()
+	if err != nil {
+		return nil
+	}
 	back := &agentV1{
-		id:      c.GetId(),
+		id:      id,
 		conn:    c,
 		isValid: false, //经过验证才让他可用
 	}

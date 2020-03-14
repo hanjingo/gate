@@ -73,6 +73,7 @@ namespace GateCliv1 {
         AlreadyReg = 3,     //已经注册无需再次注册
         MsgNotComplete = 4, //消息不完整
     }
+    
 
     export class GateCli {
         private _id: number; //客户端id

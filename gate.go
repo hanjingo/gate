@@ -18,11 +18,12 @@ var log = logger.GetDefaultLogger()
 
 type Gate struct {
 	wg      *sync.WaitGroup
-	conf    *GateConfig                     //配置
-	agents  map[interface{}]com.AgentI      //端点集合
-	servers map[interface{}]network.ServerI //tcp/ws/http服务器集合
-	hubs    *ps.Hubs                        //插件系统
-	codec   *pv4.Codec                      //编解码器
+	conf    *GateConfig                      //配置
+	agents  map[interface{}]com.AgentI       //端点集合
+	conns   map[network.SessionI]interface{} //连接和端点映射
+	servers map[interface{}]network.ServerI  //tcp/ws/http服务器集合
+	hubs    *ps.Hubs                         //插件系统
+	codec   *pv4.Codec                       //编解码器
 }
 
 func NewGate(conf *GateConfig) *Gate {
@@ -30,6 +31,7 @@ func NewGate(conf *GateConfig) *Gate {
 		wg:      new(sync.WaitGroup),
 		conf:    conf,
 		agents:  make(map[interface{}]com.AgentI),
+		conns:   make(map[network.SessionI]interface{}),
 		servers: make(map[interface{}]network.ServerI),
 		hubs:    ps.NewHubs(),
 		codec:   pv4.NewCodec(),
@@ -92,37 +94,39 @@ func (gate *Gate) Wait() {
 func (gate *Gate) onNewConn(c network.SessionI) {
 	agent := newAgentV1(c)
 	gate.agents[agent.GetId()] = agent
+	gate.conns[c] = agent.GetId()
 	if gate.hubs != nil {
 		f := func(id interface{}, hub ps.HubI) {
 			hub.Call(com.AGENT_CONNECT, agent)
 		}
 		gate.hubs.RangeHub(f)
 	}
-	log.Info("连接:%v被建立", agent.GetId())
 }
 
 //处理连接断开
 func (gate *Gate) onConnClose(c network.SessionI) {
-	log.Debug("收到连接:%v被摧毁通知", c.GetId())
-	agent, ok := gate.agents[c.GetId()]
+	agent, ok := gate.agents[c]
 	if !ok {
 		return
 	}
-	delete(gate.agents, c.GetId())
+	delete(gate.agents, agent.GetId())
+	delete(gate.conns, c)
 	if gate.hubs != nil {
 		f := func(id interface{}, hub ps.HubI) {
 			hub.Call(com.AGENT_CLOSE, agent)
 		}
 		gate.hubs.RangeHub(f)
 	}
-	log.Info("连接:%v被摧毁", c.GetId())
 }
 
 //处理收到的消息
-func (gate *Gate) handleMsg(agentId uint64, data []byte) {
-	agent, ok := gate.agents[agentId]
+func (gate *Gate) handleMsg(c network.SessionI, data []byte) {
+	id, ok := gate.conns[c]
 	if !ok {
-		log.Error("收到未知端点:%v的消息", agentId)
+		return
+	}
+	agent, ok := gate.agents[id]
+	if !ok {
 		return
 	}
 	//解析操作码
