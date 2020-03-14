@@ -3,7 +3,6 @@ package v1
 import (
 	"errors"
 	"fmt"
-	"reflect"
 
 	ws "github.com/gorilla/websocket"
 	"github.com/hanjingo/network"
@@ -13,30 +12,39 @@ import (
 
 //网关客户端
 type GateCli struct {
-	id      uint64
-	conn    network.SessionI
-	codec   protocol.CodecI
-	callMap map[interface{}]*Handler
-	onClose func(*GateCli)
+	id     uint64
+	conn   network.SessionI
+	codec  protocol.CodecI
+	fClose func(*GateCli)
+	fOnMsg func(*GateCli, *pv4.Messager) //cli,msg
 }
 
 func NewGateCli() *GateCli {
 	back := &GateCli{
-		codec:   pv4.NewCodec(),
-		callMap: make(map[interface{}]*Handler),
+		codec: pv4.NewCodec(),
 	}
 	return back
 }
 
+//设置关闭
+func (cli *GateCli) SetCloseCallback(f func(*GateCli)) {
+	cli.fClose = f
+}
+
+//设置回调
+func (cli *GateCli) SetOnMsgCallback(f func(*GateCli, *pv4.Messager)) {
+	cli.fOnMsg = f
+}
+
 //拨号
-func (cli *GateCli) Dial(dialType string, addr string, token string, conf *network.SessionConfig) error {
+func (cli *GateCli) Dial(addr string, token string, conf *network.SessionConfig) error {
 	var conn network.SessionI
 	var err error
 	c, _, err := ws.DefaultDialer.Dial(addr, nil)
 	if err != nil {
 		return err
 	}
-	conn, err = network.NewWsConn(conf, c, cli.onConnClose, nil)
+	conn, err = network.NewWsConn(conf, c, cli.onClose, cli.onMsg)
 	if err != nil {
 		return err
 	}
@@ -63,61 +71,41 @@ func (cli *GateCli) Dial(dialType string, addr string, token string, conf *netwo
 	return nil
 }
 
-//注册回调
-func (cli *GateCli) RegHandler(id interface{}, f interface{}, arg ...interface{}) error {
-	if _, ok := cli.callMap[id]; ok {
-		return errors.New("已经注册，无需再次注册")
-	}
-	inv := []reflect.Value{}
-	fun := func(in ...interface{}) {
-		for _, e := range in {
-			inv = append(inv, reflect.ValueOf(e))
-		}
-		fv := reflect.ValueOf(f)
-		fv.Call(inv)
-	}
-	h := &Handler{Id: id, Call: fun, Arg: arg}
-	cli.callMap[id] = h
-	return nil
-}
-
 //处理关闭
-func (cli *GateCli) onConnClose(s network.SessionI) {
-	if cli.onClose != nil {
-		cli.onClose(cli)
+func (cli *GateCli) onClose(s network.SessionI) {
+	if cli.fClose != nil {
+		cli.fClose(cli)
 	}
 }
 
 //回调
-func (cli *GateCli) OnMsg(session *network.SessionI, data []byte) {
-	codec := cli.codec.(*pv4.Codec)
-	id, err := codec.ParseOpCode(data)
-	if err != nil {
-		return
-	}
-	sender, err := codec.ParseSender(data)
-	if err != nil {
-		return
-	}
-	h, ok := cli.callMap[id]
-	if !ok {
-		return
-	}
-	var args []interface{}
-	args = append(args, cli)//cli
-	args = append(args, sender)//agentid
-	t := reflect.ValueOf(h.Arg).Type()
-	v := reflect.New(t)
-	if v.CanInterface() {
-		temp := v.Interface()
-		if err := codec.UnFormat(data, temp); err != nil {
+func (cli *GateCli) onMsg(session network.SessionI, data []byte) {
+	if cli.fOnMsg != nil && cli.codec != nil {
+		codec := cli.codec.(*pv4.Codec)
+		opcode, err := codec.ParseOpCode(data)
+		if err != nil {
 			return
 		}
-		args = append(args, temp)
-	} else {
-		args = append(args, v)
+		sender, err := codec.ParseSender(data)
+		if err != nil {
+			return
+		}
+		recvs, err := codec.ParseRecv(data)
+		if err != nil {
+			return
+		}
+		content := codec.GetContentData(data)
+		if content == nil {
+			return
+		}
+		msg := &pv4.Messager{
+			OpCode:   opcode,
+			Sender:   sender,
+			Receiver: recvs,
+			Content:  content,
+		}
+		cli.fOnMsg(cli, msg)
 	}
-	h.Call(args...) //call(cli, agentid, req)
 }
 
 //路由

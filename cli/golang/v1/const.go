@@ -47,16 +47,3 @@ const (
 
 	OP_CHANGE_PERM uint32 = MASK_CONTROL | 0x8 //变更权限
 )
-
-//回调类
-type Handler struct {
-	Id   interface{}
-	Call func(...interface{})
-	Arg  interface{}
-}
-
-//session
-type Session struct {
-	GateCli
-	Pid interface{}
-}
