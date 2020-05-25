@@ -6,12 +6,12 @@ import (
 	"sync"
 
 	"github.com/hanjingo/gate/plugin"
-	"github.com/hanjingo/logger"
+	"github.com/hanjingo/golib/logger"
 
 	"github.com/hanjingo/gate/com"
-	"github.com/hanjingo/network"
-	ps "github.com/hanjingo/plugin_system"
-	pv4 "github.com/hanjingo/protocol/v4"
+	"github.com/hanjingo/golib/network"
+	ps "github.com/hanjingo/golib/plugin_system"
+	pv4 "github.com/hanjingo/golib/protocol/v4"
 )
 
 var log = logger.GetDefaultLogger()

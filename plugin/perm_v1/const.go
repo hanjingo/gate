@@ -1,7 +1,7 @@
 package perm_v1
 
 import (
-	"github.com/hanjingo/logger"
+	"github.com/hanjingo/golib/logger"
 )
 
 var log = logger.GetDefaultLogger()

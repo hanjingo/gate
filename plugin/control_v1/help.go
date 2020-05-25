@@ -3,10 +3,10 @@ package control_v1
 import (
 	"time"
 
-	"github.com/hanjingo/container"
+	"github.com/hanjingo/golib/container"
 
 	"github.com/hanjingo/gate/com"
-	pv4 "github.com/hanjingo/protocol/v4"
+	pv4 "github.com/hanjingo/golib/protocol/v4"
 )
 
 func (ctl *ControllerV1) reg() {

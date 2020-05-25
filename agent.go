@@ -1,19 +1,19 @@
 package gate
 
 import (
-	"github.com/hanjingo/network"
-	util "github.com/hanjingo/util"
+	net "github.com/hanjingo/golib/network"
+	util "github.com/hanjingo/golib/util"
 )
 
 var gen = util.GetUuidGenerator()
 
 type agentV1 struct {
-	id      interface{}      //id
-	conn    network.SessionI //连接
-	isValid bool             //是否可用
+	id      interface{}  //id
+	conn    net.SessionI //连接
+	isValid bool         //是否可用
 }
 
-func newAgentV1(c network.SessionI) *agentV1 {
+func newAgentV1(c net.SessionI) *agentV1 {
 	id, err := gen.GenerateUuidUint64()
 	if err != nil {
 		return nil

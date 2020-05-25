@@ -1,7 +1,7 @@
 package plugin
 
 import (
-	ps "github.com/hanjingo/plugin_system"
+	ps "github.com/hanjingo/golib/plugin_system"
 
 	ctlv1 "github.com/hanjingo/gate/plugin/control_v1"
 	filtv1 "github.com/hanjingo/gate/plugin/filt_v1"

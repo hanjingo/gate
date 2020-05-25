@@ -1,9 +1,9 @@
 package v1
 
 import (
-	"github.com/hanjingo/network"
-	"github.com/hanjingo/protocol"
-	pv4 "github.com/hanjingo/protocol/v4"
+	"github.com/hanjingo/golib/network"
+	"github.com/hanjingo/golib/protocol"
+	pv4 "github.com/hanjingo/golib/protocol/v4"
 )
 
 func writeMsg(conn network.SessionI, codec protocol.CodecI, opcode interface{}, sender uint64, content interface{}, recvs []uint64) error {

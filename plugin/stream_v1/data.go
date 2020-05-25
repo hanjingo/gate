@@ -3,7 +3,7 @@ package stream_v1
 import (
 	"time"
 
-	"github.com/hanjingo/container"
+	"github.com/hanjingo/golib/container"
 )
 
 func init() {

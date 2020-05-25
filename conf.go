@@ -1,7 +1,7 @@
 package gate
 
 import (
-	"github.com/hanjingo/network"
+	"github.com/hanjingo/golib/network"
 )
 
 type GateConfig struct {

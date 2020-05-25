@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hanjingo/network"
+	"github.com/hanjingo/golib/network"
 )
 
 //url

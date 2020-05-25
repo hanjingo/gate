@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 
 	"github.com/hanjingo/gate"
-	"github.com/hanjingo/logger"
-	"github.com/hanjingo/util"
+	"github.com/hanjingo/golib/logger"
+	"github.com/hanjingo/golib/util"
 )
 
 // for win:   go build -o gate.exe main.go

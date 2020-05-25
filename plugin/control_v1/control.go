@@ -1,10 +1,10 @@
 package control_v1
 
 import (
-	"github.com/hanjingo/container"
+	"github.com/hanjingo/golib/container"
 
-	ps "github.com/hanjingo/plugin_system"
-	pv4 "github.com/hanjingo/protocol/v4"
+	ps "github.com/hanjingo/golib/plugin_system"
+	pv4 "github.com/hanjingo/golib/protocol/v4"
 )
 
 const NAME = "ControllerV1" //插件名字

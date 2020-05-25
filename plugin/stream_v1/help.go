@@ -1,8 +1,8 @@
 package stream_v1
 
 import (
-	"github.com/hanjingo/container"
 	"github.com/hanjingo/gate/com"
+	"github.com/hanjingo/golib/container"
 )
 
 func (s *StreamV1) reg() {

@@ -3,8 +3,8 @@ package control_v1
 import (
 	"time"
 
-	"github.com/hanjingo/container"
 	"github.com/hanjingo/gate/com"
+	"github.com/hanjingo/golib/container"
 )
 
 func init() {

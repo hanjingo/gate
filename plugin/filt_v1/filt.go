@@ -1,7 +1,7 @@
 package filt_v1
 
 import (
-	ps "github.com/hanjingo/plugin_system"
+	ps "github.com/hanjingo/golib/plugin_system"
 )
 
 const NAME = "FiltV1"   //插件名字

@@ -3,7 +3,7 @@ package stream_v1
 import (
 	"time"
 
-	ps "github.com/hanjingo/plugin_system"
+	ps "github.com/hanjingo/golib/plugin_system"
 	"github.com/hanjingo/util"
 )
 

@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	ws "github.com/gorilla/websocket"
-	"github.com/hanjingo/network"
-	"github.com/hanjingo/protocol"
-	pv4 "github.com/hanjingo/protocol/v4"
+	"github.com/hanjingo/golib/network"
+	"github.com/hanjingo/golib/protocol"
+	pv4 "github.com/hanjingo/golib/protocol/v4"
 )
 
 //网关客户端
