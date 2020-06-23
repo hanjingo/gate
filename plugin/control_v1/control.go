@@ -3,7 +3,7 @@ package control_v1
 import (
 	"github.com/hanjingo/golib/container"
 
-	ps "github.com/hanjingo/golib/plugin_system"
+	ps "github.com/hanjingo/golib/plugin"
 	pv4 "github.com/hanjingo/golib/protocol/v4"
 )
 

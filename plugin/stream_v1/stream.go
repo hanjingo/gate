@@ -3,8 +3,8 @@ package stream_v1
 import (
 	"time"
 
-	ps "github.com/hanjingo/golib/plugin_system"
-	"github.com/hanjingo/util"
+	ps "github.com/hanjingo/golib/plugin"
+	"github.com/hanjingo/golib/util"
 )
 
 const NAME = "StreamV1" //插件名字

@@ -108,3 +108,8 @@ func (gate *Gate) getGateInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	gate.info() //todo
 }
+
+//热更新插件
+func (gate *Gate) hotPatch(w http.ResponseWriter, r *http.Request) {
+	//todo
+}
