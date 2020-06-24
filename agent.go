@@ -2,10 +2,10 @@ package gate
 
 import (
 	net "github.com/hanjingo/golib/network"
-	util "github.com/hanjingo/golib/util"
+	uuid "github.com/hanjingo/golib/uuid"
 )
 
-var gen = util.GetUuidGenerator()
+var gen = uuid.GetUuidGenerator()
 
 type agentV1 struct {
 	id      interface{}  //id
@@ -14,7 +14,7 @@ type agentV1 struct {
 }
 
 func newAgentV1(c net.SessionI) *agentV1 {
-	id, err := gen.GenerateUuidUint64()
+	id, err := gen.GenUuid64()
 	if err != nil {
 		return nil
 	}

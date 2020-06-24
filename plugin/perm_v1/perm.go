@@ -1,8 +1,9 @@
 package perm_v1
 
 import (
-	ps "github.com/hanjingo/golib/plugin_system"
+	plugin "github.com/hanjingo/golib/plugin"
 	pv4 "github.com/hanjingo/golib/protocol/v4"
+	types "github.com/hanjingo/golib/types"
 )
 
 const NAME = "PermV1"   //插件名字
@@ -11,26 +12,26 @@ const VERSION = "1.0.0" //插件版本
 type PermV1 struct {
 	name  string
 	codec *pv4.Codec
-	info  *ps.PluginInfo
+	info  *plugin.PluginInfo
 }
 
-func New() ps.PluginI {
+func New() plugin.PluginI {
 	back := &PermV1{
 		name:  NAME,
 		codec: pv4.NewCodec(),
 	}
-	back.info = &ps.PluginInfo{
+	back.info = &plugin.PluginInfo{
 		Id:          back.name,
-		Type:        ps.PLUGIN_TYPE_MEM,
+		Type:        plugin.PTYPE_MEM,
 		Version:     VERSION,
-		Objs:        make(map[string]*ps.Object),
+		Objs:        make(map[string]*types.Object),
 		CallBackMap: make(map[interface{}]interface{}),
 	}
 	back.reg()
 	return back
 }
 
-func (p *PermV1) Info() *ps.PluginInfo {
+func (p *PermV1) Info() *plugin.PluginInfo {
 	return p.info
 }
 

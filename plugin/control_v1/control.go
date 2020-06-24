@@ -3,8 +3,9 @@ package control_v1
 import (
 	"github.com/hanjingo/golib/container"
 
-	ps "github.com/hanjingo/golib/plugin"
+	plugin "github.com/hanjingo/golib/plugin"
 	pv4 "github.com/hanjingo/golib/protocol/v4"
+	types "github.com/hanjingo/golib/types"
 )
 
 const NAME = "ControllerV1" //插件名字
@@ -16,10 +17,10 @@ type ControllerV1 struct {
 	subAgents           map[string]*container.Set //订阅了主题的端点集合 key:topic value:端点集合
 	codec               *pv4.Codec                //编解码
 	newAgentWaitTimeout int                       //新端点等待时长(ms)
-	info                *ps.PluginInfo            //插件信息
+	info                *plugin.PluginInfo        //插件信息
 }
 
-func New() ps.PluginI {
+func New() plugin.PluginI {
 	back := &ControllerV1{
 		name:                NAME,
 		apiAgents:           make(map[uint32]*container.Set),
@@ -27,11 +28,11 @@ func New() ps.PluginI {
 		codec:               pv4.NewCodec(),
 		newAgentWaitTimeout: 3000,
 	}
-	inf := &ps.PluginInfo{
+	inf := &plugin.PluginInfo{
 		Id:          back.name,
-		Type:        ps.PLUGIN_TYPE_MEM,
+		Type:        plugin.PTYPE_MEM,
 		Version:     VERSION,
-		Objs:        make(map[string]*ps.Object),
+		Objs:        make(map[string]*types.Object),
 		CallBackMap: make(map[interface{}]interface{}),
 	}
 	back.info = inf
@@ -39,7 +40,7 @@ func New() ps.PluginI {
 	return back
 }
 
-func (c *ControllerV1) Info() *ps.PluginInfo {
+func (c *ControllerV1) Info() *plugin.PluginInfo {
 	return c.info
 }
 

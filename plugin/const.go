@@ -1,7 +1,7 @@
 package plugin
 
 import (
-	ps "github.com/hanjingo/golib/plugin_system"
+	plugin "github.com/hanjingo/golib/plugin"
 
 	ctlv1 "github.com/hanjingo/gate/plugin/control_v1"
 	filtv1 "github.com/hanjingo/gate/plugin/filt_v1"
@@ -9,11 +9,11 @@ import (
 	streamv1 "github.com/hanjingo/gate/plugin/stream_v1"
 )
 
-var plugins map[string]func() ps.PluginI
+var plugins map[string]func() plugin.PluginI
 
-func GetPlugins() map[string]func() ps.PluginI {
+func GetPlugins() map[string]func() plugin.PluginI {
 	if plugins == nil {
-		plugins = make(map[string]func() ps.PluginI)
+		plugins = make(map[string]func() plugin.PluginI)
 	}
 	return plugins
 }

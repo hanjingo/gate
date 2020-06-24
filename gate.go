@@ -5,12 +5,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hanjingo/gate/plugin"
-	"github.com/hanjingo/golib/logger"
-
-	"github.com/hanjingo/gate/com"
-	"github.com/hanjingo/golib/network"
-	ps "github.com/hanjingo/golib/plugin_system"
+	com "github.com/hanjingo/gate/com"
+	gplugin "github.com/hanjingo/gate/plugin"
+	logger "github.com/hanjingo/golib/logger"
+	network "github.com/hanjingo/golib/network"
+	plugin "github.com/hanjingo/golib/plugin"
 	pv4 "github.com/hanjingo/golib/protocol/v4"
 )
 
@@ -22,7 +21,7 @@ type Gate struct {
 	agents  map[interface{}]com.AgentI       //端点集合
 	conns   map[network.SessionI]interface{} //连接和端点映射
 	servers map[interface{}]network.ServerI  //tcp/ws/http服务器集合
-	hubs    *ps.Hubs                         //插件系统
+	hubs    *plugin.Hubs                     //插件系统
 	codec   *pv4.Codec                       //编解码器
 }
 
@@ -33,13 +32,13 @@ func NewGate(conf *GateConfig) *Gate {
 		agents:  make(map[interface{}]com.AgentI),
 		conns:   make(map[network.SessionI]interface{}),
 		servers: make(map[interface{}]network.ServerI),
-		hubs:    ps.NewHubs(),
+		hubs:    plugin.NewHubs(),
 		codec:   pv4.NewCodec(),
 	}
 	back.reg()
 	//加载插件
 	for _, e := range conf.Plugins {
-		if f, ok := plugin.GetPlugins()[e.Name]; ok {
+		if f, ok := gplugin.GetPlugins()[e.Name]; ok {
 			p := f()
 			if err := back.hubs.LoadPlugin(p); err != nil {
 				panic(err)
@@ -96,7 +95,7 @@ func (gate *Gate) onNewConn(c network.SessionI) {
 	gate.agents[agent.GetId()] = agent
 	gate.conns[c] = agent.GetId()
 	if gate.hubs != nil {
-		f := func(id interface{}, hub ps.HubI) {
+		f := func(id interface{}, hub plugin.HubI) {
 			hub.Call(com.AGENT_CONNECT, agent)
 		}
 		gate.hubs.RangeHub(f)
@@ -112,7 +111,7 @@ func (gate *Gate) onConnClose(c network.SessionI) {
 	delete(gate.agents, agent.GetId())
 	delete(gate.conns, c)
 	if gate.hubs != nil {
-		f := func(id interface{}, hub ps.HubI) {
+		f := func(id interface{}, hub plugin.HubI) {
 			hub.Call(com.AGENT_CLOSE, agent)
 		}
 		gate.hubs.RangeHub(f)

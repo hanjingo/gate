@@ -3,8 +3,9 @@ package stream_v1
 import (
 	"time"
 
-	ps "github.com/hanjingo/golib/plugin"
-	"github.com/hanjingo/golib/util"
+	file "github.com/hanjingo/golib/file"
+	plugin "github.com/hanjingo/golib/plugin"
+	types "github.com/hanjingo/golib/types"
 )
 
 const NAME = "StreamV1" //插件名字
@@ -12,25 +13,25 @@ const VERSION = "1.0.0" //插件版本
 
 type StreamV1 struct {
 	name        string
-	info        *ps.PluginInfo       //插件消息
+	info        *plugin.PluginInfo   //插件消息
 	streamSpeed int                  //流速(字节/s)
 	scanDur     int                  //扫描间隔(s)
 	reSendMsg   func(uint64, []byte) //重发消息函数
 }
 
 //streamSize:默认流速 	scanDur:扫描间隔	f:消息重发函数
-func New() ps.PluginI {
+func New() plugin.PluginI {
 	back := &StreamV1{
 		name:        NAME,
-		streamSpeed: int(util.MB * 64), //默认流速
+		streamSpeed: int(file.MB * 64), //默认流速
 		scanDur:     10,                //扫描间隔
 		reSendMsg:   nil,
 	}
-	back.info = &ps.PluginInfo{
+	back.info = &plugin.PluginInfo{
 		Id:          back.name,
-		Type:        ps.PLUGIN_TYPE_MEM,
+		Type:        plugin.PTYPE_MEM,
 		Version:     VERSION,
-		Objs:        make(map[string]*ps.Object),
+		Objs:        make(map[string]*types.Object),
 		CallBackMap: make(map[interface{}]interface{}),
 	}
 	back.reg()
@@ -38,7 +39,7 @@ func New() ps.PluginI {
 	return back
 }
 
-func (s *StreamV1) Info() *ps.PluginInfo {
+func (s *StreamV1) Info() *plugin.PluginInfo {
 	return s.info
 }
 

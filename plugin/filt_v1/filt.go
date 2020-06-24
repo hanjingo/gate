@@ -1,7 +1,8 @@
 package filt_v1
 
 import (
-	ps "github.com/hanjingo/golib/plugin_system"
+	plugin "github.com/hanjingo/golib/plugin"
+	types "github.com/hanjingo/golib/types"
 )
 
 const NAME = "FiltV1"   //插件名字
@@ -9,25 +10,25 @@ const VERSION = "1.0.0" //插件版本
 
 type FiltV1 struct {
 	name string
-	info *ps.PluginInfo
+	info *plugin.PluginInfo
 }
 
-func New() ps.PluginI {
+func New() plugin.PluginI {
 	back := &FiltV1{
 		name: NAME,
 	}
-	back.info = &ps.PluginInfo{
+	back.info = &plugin.PluginInfo{
 		Id:          back.name,
-		Type:        ps.PLUGIN_TYPE_MEM,
+		Type:        plugin.PTYPE_MEM,
 		Version:     VERSION,
-		Objs:        make(map[string]*ps.Object),
+		Objs:        make(map[string]*types.Object),
 		CallBackMap: make(map[interface{}]interface{}),
 	}
 	back.reg()
 	return back
 }
 
-func (f *FiltV1) Info() *ps.PluginInfo {
+func (f *FiltV1) Info() *plugin.PluginInfo {
 	return f.info
 }
 
